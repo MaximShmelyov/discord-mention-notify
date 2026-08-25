@@ -1,0 +1,25 @@
+{
+  "discord.mention.title": "📢 Mention in Discord",
+  "discord.mention.unknownChannel": "unknown",
+
+  "discord.verification.codePrefix": "VERIFICATION CODE",
+  "discord.verification.dmOnly": "❌ The verification code must be sent as a direct message to the bot.",
+  "discord.verification.success": "✅ You have been successfully registered and linked to Telegram.",
+  "discord.verification.invalid": "❌ The verification code is invalid or the Discord tag does not match.",
+
+  "telegram.start": "👋 Hello! Use /register to sign up, /list to manage tracked channels, or /lang to change language.",
+
+  "telegram.register.prompt": "🧾 Send me your Discord tag (e.g. user#1234), or multiple tags separated by commas:",
+  "telegram.register.timeout": "⏰ Timed out. Use /register again.",
+  "telegram.register.invalidTags": "❌ Could not parse tags. Try /register again.",
+  "telegram.register.sendCode": "📨 Now send the following message in Discord (from the account you specified):\n\nVERIFICATION CODE: {code}",
+  "telegram.register.confirmed": "✅ Successfully registered Discord user {discordTag}",
+
+  "telegram.list.notRegistered": "⚠️ You are not registered. Use /register.",
+  "telegram.list.noChannels": "⚠️ Channels have not loaded yet. Please wait for the Discord bot to update the list.",
+  "telegram.list.header": "🛠 Choose channels to track:",
+  "telegram.channel.saved": "✅ Saved",
+
+  "telegram.lang.prompt": "🌐 Choose your language:",
+  "telegram.lang.saved": "✅ Language saved"
+}

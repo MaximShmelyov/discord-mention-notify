@@ -1,0 +1,7 @@
+available-channels.json
+user-db.json
+node_modules/
+logs/
+dist/
+.env
+.idea/

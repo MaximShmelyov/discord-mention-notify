@@ -1,0 +1,36 @@
+{
+  "name": "discord-mention-notify",
+  "version": "2.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --env-file=.env dist/start.js",
+    "copy:locales": "node -e \"require('fs').cpSync('src/locales','dist/locales',{recursive:true})\"",
+    "build": "tsc && npm run copy:locales",
+    "test": "npm run build && node --test dist/__tests__/*.test.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "ci": "npm run format:check && npm run lint && npm run typecheck && npm test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Discord-to-Telegram mention notification bridge",
+  "dependencies": {
+    "discord.js": "^14.19.3",
+    "node-telegram-bot-api": "^2.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.3",
+    "eslint": "^10.9.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.68.0"
+  }
+}

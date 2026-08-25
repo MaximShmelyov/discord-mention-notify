@@ -1,0 +1,24 @@
+####################################################################
+# Portainer Stack — paste into Portainer > Stacks > Add stack
+#
+# Set these environment variables in the Portainer stack UI:
+#   DISCORD_TOKEN
+#   TELEGRAM_TOKEN
+#   WHITELISTED_GUILDS  (comma-separated server IDs)
+#
+# The image tag defaults to "latest" but can be pinned to a
+# specific release (e.g. "1.0.0") via the IMAGE_TAG variable.
+####################################################################
+services:
+  discord-mention-notify:
+    image: ghcr.io/maximshmelyov/discord-mention-notify:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - WHITELISTED_GUILDS=${WHITELISTED_GUILDS}
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:

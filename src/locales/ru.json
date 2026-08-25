@@ -1,0 +1,25 @@
+{
+  "discord.mention.title": "📢 Упоминание в Discord",
+  "discord.mention.unknownChannel": "unknown",
+
+  "discord.verification.codePrefix": "КОД ПОДТВЕРЖДЕНИЯ",
+  "discord.verification.dmOnly": "❌ Код подтверждения нужно отправить в личные сообщения боту.",
+  "discord.verification.success": "✅ Ты успешно зарегистрирован и связан с Telegram.",
+  "discord.verification.invalid": "❌ Код подтверждения недействителен или Discord-тег не совпадает.",
+
+  "telegram.start": "👋 Привет! Используй /register для регистрации, /list для управления отслеживанием или /lang для смены языка.",
+
+  "telegram.register.prompt": "🧾 Отправь мне свой Discord тег (например, user#1234) или несколько через запятую:",
+  "telegram.register.timeout": "⏰ Время ожидания истекло. Используй /register заново.",
+  "telegram.register.invalidTags": "❌ Не удалось распознать теги. Попробуй /register заново.",
+  "telegram.register.sendCode": "📨 Теперь отправь следующее сообщение в Discord (от указанного аккаунта):\n\nКОД ПОДТВЕРЖДЕНИЯ: {code}",
+  "telegram.register.confirmed": "✅ Успешно зарегистрирован Discord-пользователь {discordTag}",
+
+  "telegram.list.notRegistered": "⚠️ Ты не зарегистрирован. Используй /register.",
+  "telegram.list.noChannels": "⚠️ Каналы ещё не загружены. Пожалуйста, подожди, пока Discord-бот обновит список.",
+  "telegram.list.header": "🛠 Выбери каналы для отслеживания:",
+  "telegram.channel.saved": "✅ Сохранено",
+
+  "telegram.lang.prompt": "🌐 Выбери язык:",
+  "telegram.lang.saved": "✅ Язык сохранён"
+}

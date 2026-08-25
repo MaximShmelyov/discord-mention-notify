@@ -1,0 +1,10 @@
+services:
+  discord-mention-notify:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:
