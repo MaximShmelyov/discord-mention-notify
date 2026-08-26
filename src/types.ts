@@ -31,6 +31,7 @@ export interface Config {
 
 export interface Logger {
   log(msg: string): void;
+  debug(msg: string): void;
 }
 
 export interface TelegramBotHandle {

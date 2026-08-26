@@ -13,7 +13,7 @@ import { Store } from '../store.js';
 import type { Logger, DiscordAccount, ChannelEntry } from '../types.js';
 
 function createSilentLogger(): Logger {
-  return { log: () => {} };
+  return { log: () => {}, debug: () => {} };
 }
 
 describe('buildChannelKeyboard', () => {

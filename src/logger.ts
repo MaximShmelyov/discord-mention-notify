@@ -66,10 +66,23 @@ export function log(msg: string): void {
   }
 }
 
+export function debug(msg: string): void {
+  const line = `[${new Date().toISOString()}] [DEBUG] ${msg}`;
+  try {
+    ensureStream();
+    logStream?.write(line + '\n');
+  } catch (error) {
+    console.error('Logging error:', error);
+  }
+}
+
 export function createLogger(prefix: string): Logger {
   return {
     log(msg: string): void {
       log(`[${prefix}] ${msg}`);
+    },
+    debug(msg: string): void {
+      debug(`[${prefix}] ${msg}`);
     },
   };
 }

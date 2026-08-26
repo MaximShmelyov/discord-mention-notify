@@ -11,7 +11,7 @@ function createTempDir(): string {
 }
 
 function createSilentLogger(): Logger {
-  return { log: () => {} };
+  return { log: () => {}, debug: () => {} };
 }
 
 describe('Store', () => {

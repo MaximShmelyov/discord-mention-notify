@@ -89,6 +89,7 @@ const KNOWN_COMMANDS = new Set(['start', 'register', 'unregister', 'list', 'lang
 export function createTelegramBot(config: Config, store: Store, logger: Logger): TelegramBotHandle {
   const bot = new Bot(config.TELEGRAM_TOKEN);
   const log = logger.log.bind(logger);
+  const dbg = logger.debug.bind(logger);
 
   /** Shorthand: resolve the locale for a Telegram user. */
   const loc = (telegramId: string): Locale => store.getUserLocale(telegramId);
@@ -272,8 +273,8 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
             message_id: cbq.message.message_id,
             reply_markup: buildLangKeyboard(newLocale),
           });
-        } catch {
-          /* ignore edit errors (e.g. message not modified) */
+        } catch (err) {
+          dbg(`Edit message failed: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
       return;
