@@ -86,7 +86,9 @@ export function createDiscordBot(
       }
     }
     store.enableChannels(telegramId, allChannelIds);
-    log(`📡 Channels pushed to newly linked user TG=${telegramId} (${allChannelIds.length} enabled)`);
+    log(
+      `📡 Channels pushed to newly linked user TG=${telegramId} (${allChannelIds.length} enabled)`,
+    );
   });
 
   /** Resolve the locale for a Discord user via reverse lookup. */
