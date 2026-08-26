@@ -18,10 +18,35 @@ export class Store extends EventEmitter {
     try {
       const raw = fs.readFileSync(this.filePath, 'utf-8');
       this.db = JSON.parse(raw) as UserDB;
+      this.migrateChannels();
       this.logger.log(`User DB loaded: ${Object.keys(this.db).length} users`);
     } catch {
       this.db = {};
       this.logger.log('User DB not found or invalid, starting fresh');
+    }
+  }
+
+  /**
+   * Migrate legacy flat `channels: string[]` to per-account
+   * `channels: Record<string, string[]>`.  Each linked Discord account
+   * inherits the old channel list so no subscriptions are lost.
+   */
+  private migrateChannels(): void {
+    let migrated = false;
+    for (const user of Object.values(this.db)) {
+      if (Array.isArray(user.channels)) {
+        const oldChannels = user.channels as unknown as string[];
+        const perAccount: Record<string, string[]> = {};
+        for (const discordId of user.discordIds) {
+          perAccount[discordId] = [...oldChannels];
+        }
+        user.channels = perAccount;
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      this.save();
+      this.logger.log('Migrated channels from flat array to per-account format');
     }
   }
 
@@ -51,7 +76,7 @@ export class Store extends EventEmitter {
     const record: UserRecord = {
       discordTags: [],
       discordIds: [],
-      channels: [],
+      channels: {},
     };
     this.db[telegramId] = record;
     this.save();
@@ -59,16 +84,28 @@ export class Store extends EventEmitter {
     return record;
   }
 
-  addDiscordLink(telegramId: string, tag: string, discordId: string): void {
+  addDiscordLink(telegramId: string, tag: string, discordId: string): boolean {
     let user = this.db[telegramId];
     if (!user) {
       user = this.createUser(telegramId);
     }
+
+    // Prevent duplicate Discord accounts for the same Telegram user
+    if (user.discordIds.includes(discordId)) {
+      return false;
+    }
+
     user.discordTags.push(tag);
     user.discordIds.push(discordId);
+    user.channels[discordId] = [];
     this.save();
     this.emit('change');
-    this.emit('userLinked', telegramId);
+    this.emit('userLinked', telegramId, discordId);
+    return true;
+  }
+
+  getAccountChannels(telegramId: string, discordId: string): string[] {
+    return this.db[telegramId]?.channels[discordId] ?? [];
   }
 
   getUserLocale(telegramId: string): Locale {
@@ -93,14 +130,18 @@ export class Store extends EventEmitter {
     return undefined;
   }
 
-  enableChannels(telegramId: string, channelIds: string[]): void {
+  enableChannels(telegramId: string, discordId: string, channelIds: string[]): void {
     const user = this.db[telegramId];
     if (!user) return;
 
+    if (!user.channels[discordId]) {
+      user.channels[discordId] = [];
+    }
+
     let changed = false;
     for (const channelId of channelIds) {
-      if (!user.channels.includes(channelId)) {
-        user.channels.push(channelId);
+      if (!user.channels[discordId]!.includes(channelId)) {
+        user.channels[discordId]!.push(channelId);
         changed = true;
       }
     }
@@ -111,15 +152,20 @@ export class Store extends EventEmitter {
     }
   }
 
-  toggleChannel(telegramId: string, channelId: string): boolean {
+  toggleChannel(telegramId: string, discordId: string, channelId: string): boolean {
     const user = this.db[telegramId];
     if (!user) return false;
 
-    const index = user.channels.indexOf(channelId);
+    if (!user.channels[discordId]) {
+      user.channels[discordId] = [];
+    }
+
+    const arr = user.channels[discordId]!;
+    const index = arr.indexOf(channelId);
     if (index === -1) {
-      user.channels.push(channelId);
+      arr.push(channelId);
     } else {
-      user.channels.splice(index, 1);
+      arr.splice(index, 1);
     }
 
     this.save();

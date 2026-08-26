@@ -11,7 +11,7 @@ const CLEANUP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface PendingVerification {
   telegramId: string;
-  expectedTags: string[];
+  expectedTag: string;
   expiresAt: number;
 }
 
@@ -28,15 +28,31 @@ export function mergeChannelEntries(
 
 export function buildChannelKeyboard(
   entries: ChannelEntry[],
-  userChannels: string[],
+  enabledChannels: string[],
+  discordId: string,
+  showBack: boolean,
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
   for (const entry of entries) {
-    const active = userChannels.includes(entry.id);
+    const active = enabledChannels.includes(entry.id);
     kb.text(
       `${active ? '✅' : '❌'} ${entry.guildName} / #${entry.channelName}`,
-      `toggle_${entry.id}`,
+      `ch_${discordId}_${entry.id}`,
     ).row();
+  }
+  if (showBack) {
+    kb.text('← Back', 'back_accts').row();
+  }
+  return kb.build();
+}
+
+export function buildAccountKeyboard(
+  discordTags: string[],
+  discordIds: string[],
+): ReturnType<InlineKeyboardBuilder['build']> {
+  const kb = new InlineKeyboardBuilder();
+  for (let i = 0; i < discordIds.length; i++) {
+    kb.text(`👤 ${discordTags[i]}`, `acct_${discordIds[i]}`).row();
   }
   return kb.build();
 }
@@ -120,8 +136,18 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       return ctx.reply(t(loc(chatIdStr), 'telegram.list.noChannels'));
     }
 
-    return ctx.reply(t(loc(chatIdStr), 'telegram.list.header'), {
-      reply_markup: buildChannelKeyboard(entries, user.channels),
+    // Single account — go directly to channel list
+    if (user.discordIds.length === 1) {
+      const discordId = user.discordIds[0]!;
+      const accountChannels = store.getAccountChannels(chatIdStr, discordId);
+      return ctx.reply(t(loc(chatIdStr), 'telegram.list.header'), {
+        reply_markup: buildChannelKeyboard(entries, accountChannels, discordId, false),
+      });
+    }
+
+    // Multiple accounts — show account selector
+    return ctx.reply(t(loc(chatIdStr), 'telegram.list.selectAccount'), {
+      reply_markup: buildAccountKeyboard(user.discordTags, user.discordIds),
     });
   });
 
@@ -170,27 +196,24 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
     awaitingTags.delete(chatIdStr);
 
-    const tags = text
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (tags.length === 0) {
-      return ctx.reply(t(loc(chatIdStr), 'telegram.register.invalidTags'));
+    const tag = text.trim();
+    if (tag.length === 0 || tag.includes(',')) {
+      return ctx.reply(t(loc(chatIdStr), 'telegram.register.invalidTag'));
     }
 
     const code = crypto.randomUUID().split('-')[0]!;
     pendingVerification.set(code, {
       telegramId: chatIdStr,
-      expectedTags: tags,
+      expectedTag: tag,
       expiresAt: Date.now() + CODE_EXPIRY_MS,
     });
 
-    log(`Registration requested TG=${chatIdStr}, Discord tags=${tags.join(', ')}, code=${code}`);
+    log(`Registration requested TG=${chatIdStr}, Discord tag=${tag}, code=${code}`);
 
     return ctx.reply(t(loc(chatIdStr), 'telegram.register.sendCode', { code }));
   });
 
-  // --- Callback query (language toggle + channel toggle) ---
+  // --- Callback query (language toggle + channel toggle + account selection) ---
 
   bot.on('callback_query', async (ctx: Context) => {
     const cbq = ctx.callbackQuery;
@@ -224,37 +247,98 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       return;
     }
 
-    // --- Channel toggle ---
     const user = store.getUser(chatIdStr);
     if (!user) return;
 
-    const channelId = cbq.data.replace('toggle_', '');
-    const added = store.toggleChannel(chatIdStr, channelId);
-    log(
-      `${added ? '✅' : '❎'} TG=${chatIdStr} ${added ? 'enabled' : 'disabled'} channel ${channelId}`,
-    );
+    // --- Account selection (multi-account → show channels for chosen account) ---
+    if (cbq.data.startsWith('acct_')) {
+      const discordId = cbq.data.slice('acct_'.length);
+      const tagIndex = user.discordIds.indexOf(discordId);
+      if (tagIndex === -1) return;
 
-    await ctx.answerCallbackQuery({ text: t(loc(chatIdStr), 'telegram.channel.saved') });
+      const discordTag = user.discordTags[tagIndex]!;
+      const entries = availableChannels.get(chatIdStr) ?? [];
+      const accountChannels = store.getAccountChannels(chatIdStr, discordId);
 
-    const entries = availableChannels.get(chatIdStr) ?? [];
-    const updatedUser = store.getUser(chatIdStr);
-    if (!updatedUser || !cbq.message) return;
+      await ctx.answerCallbackQuery();
 
-    try {
-      await bot.api.editMessageReplyMarkup({
-        chat_id: chatId,
-        message_id: cbq.message.message_id,
-        reply_markup: buildChannelKeyboard(entries, updatedUser.channels),
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log(`Failed to update keyboard: ${msg}`);
+      if (cbq.message) {
+        try {
+          await bot.api.editMessageText({
+            chat_id: chatId,
+            message_id: cbq.message.message_id,
+            text: t(loc(chatIdStr), 'telegram.list.accountHeader', { discordTag }),
+            reply_markup: buildChannelKeyboard(entries, accountChannels, discordId, true),
+          });
+        } catch {
+          /* ignore edit errors */
+        }
+      }
+      return;
+    }
+
+    // --- Back to account list ---
+    if (cbq.data === 'back_accts') {
+      await ctx.answerCallbackQuery();
+
+      if (cbq.message) {
+        try {
+          await bot.api.editMessageText({
+            chat_id: chatId,
+            message_id: cbq.message.message_id,
+            text: t(loc(chatIdStr), 'telegram.list.selectAccount'),
+            reply_markup: buildAccountKeyboard(user.discordTags, user.discordIds),
+          });
+        } catch {
+          /* ignore edit errors */
+        }
+      }
+      return;
+    }
+
+    // --- Channel toggle (ch_{discordId}_{channelId}) ---
+    if (cbq.data.startsWith('ch_')) {
+      const rest = cbq.data.slice('ch_'.length);
+      const sepIdx = rest.indexOf('_');
+      if (sepIdx === -1) return;
+      const discordId = rest.slice(0, sepIdx);
+      const channelId = rest.slice(sepIdx + 1);
+
+      const added = store.toggleChannel(chatIdStr, discordId, channelId);
+      log(
+        `${added ? '✅' : '❎'} TG=${chatIdStr} Discord=${discordId} ${added ? 'enabled' : 'disabled'} channel ${channelId}`,
+      );
+
+      await ctx.answerCallbackQuery({ text: t(loc(chatIdStr), 'telegram.channel.saved') });
+
+      const entries = availableChannels.get(chatIdStr) ?? [];
+      const accountChannels = store.getAccountChannels(chatIdStr, discordId);
+      const showBack = user.discordIds.length > 1;
+
+      if (cbq.message) {
+        try {
+          await bot.api.editMessageReplyMarkup({
+            chat_id: chatId,
+            message_id: cbq.message.message_id,
+            reply_markup: buildChannelKeyboard(entries, accountChannels, discordId, showBack),
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          log(`Failed to update keyboard: ${msg}`);
+        }
+      }
+      return;
     }
   });
 
   // --- Public API ---
 
-  function confirmDiscordCode(code: string, discordTag: string, discordId: string): string | null {
+  function confirmDiscordCode(
+    code: string,
+    discordTag: string,
+    discordId: string,
+    discordUsername: string,
+  ): string | null {
     const pending = pendingVerification.get(code);
     if (!pending) return null;
 
@@ -263,16 +347,23 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       return null;
     }
 
-    if (!pending.expectedTags.includes(discordTag)) return null;
+    const expected = pending.expectedTag;
+    if (expected !== discordTag && expected !== discordUsername) return null;
 
-    store.addDiscordLink(pending.telegramId, discordTag, discordId);
+    const added = store.addDiscordLink(pending.telegramId, discordTag, discordId);
     pendingVerification.delete(code);
 
-    log(`✅ Linked: TG=${pending.telegramId} <-> Discord=${discordTag}`);
+    const messageKey = added ? 'telegram.register.confirmed' : 'telegram.register.alreadyLinked';
+
+    log(
+      added
+        ? `✅ Linked: TG=${pending.telegramId} <-> Discord=${discordTag}`
+        : `⚠️ Already linked: TG=${pending.telegramId} <-> Discord=${discordTag}`,
+    );
     bot.api
       .sendMessage({
         chat_id: Number(pending.telegramId),
-        text: t(loc(pending.telegramId), 'telegram.register.confirmed', { discordTag }),
+        text: t(loc(pending.telegramId), messageKey, { discordTag }),
       })
       .catch((err: unknown) => {
         const msg = err instanceof Error ? err.message : String(err);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { buildChannelKeyboard, mergeChannelEntries } from '../telegram.js';
+import { buildChannelKeyboard, buildAccountKeyboard, mergeChannelEntries } from '../telegram.js';
 import { Store } from '../store.js';
 import type { Logger, ChannelEntry } from '../types.js';
 
@@ -19,7 +19,7 @@ describe('buildChannelKeyboard', () => {
   ];
 
   it('should mark active channels with ✅', () => {
-    const kb = buildChannelKeyboard(entries, ['ch1', 'ch3']);
+    const kb = buildChannelKeyboard(entries, ['ch1', 'ch3'], 'd1', false);
     const buttons = kb.inline_keyboard.flat();
     assert.ok(buttons[0]?.text.startsWith('✅'));
     assert.ok(buttons[1]?.text.startsWith('❌'));
@@ -27,21 +27,64 @@ describe('buildChannelKeyboard', () => {
   });
 
   it('should include guild and channel name', () => {
-    const kb = buildChannelKeyboard(entries, []);
+    const kb = buildChannelKeyboard(entries, [], 'd1', false);
     const buttons = kb.inline_keyboard.flat();
     assert.ok(buttons[0]?.text.includes('Server1 / #general'));
   });
 
-  it('should set callback_data with toggle_ prefix', () => {
-    const kb = buildChannelKeyboard(entries, []);
+  it('should set callback_data with ch_{discordId}_{channelId} format', () => {
+    const kb = buildChannelKeyboard(entries, [], 'd1', false);
     const buttons = kb.inline_keyboard.flat();
-    assert.strictEqual(buttons[0]?.callback_data, 'toggle_ch1');
-    assert.strictEqual(buttons[1]?.callback_data, 'toggle_ch2');
+    assert.strictEqual(buttons[0]?.callback_data, 'ch_d1_ch1');
+    assert.strictEqual(buttons[1]?.callback_data, 'ch_d1_ch2');
+    assert.strictEqual(buttons[2]?.callback_data, 'ch_d1_ch3');
   });
 
-  it('should return empty keyboard for empty entries', () => {
-    const kb = buildChannelKeyboard([], []);
-    // All rows should be empty or the keyboard itself
+  it('should include back button when showBack is true', () => {
+    const kb = buildChannelKeyboard(entries, [], 'd1', true);
+    const allButtons = kb.inline_keyboard.flat();
+    const backButton = allButtons.find((b) => b.callback_data === 'back_accts');
+    assert.ok(backButton, 'back button must be present');
+    assert.ok(backButton!.text.includes('Back'));
+  });
+
+  it('should not include back button when showBack is false', () => {
+    const kb = buildChannelKeyboard(entries, [], 'd1', false);
+    const allButtons = kb.inline_keyboard.flat();
+    const backButton = allButtons.find((b) => b.callback_data === 'back_accts');
+    assert.strictEqual(backButton, undefined, 'back button must not be present');
+  });
+
+  it('should return empty keyboard for empty entries (no back)', () => {
+    const kb = buildChannelKeyboard([], [], 'd1', false);
+    assert.strictEqual(kb.inline_keyboard.flat().length, 0);
+  });
+
+  it('should return only back button for empty entries with showBack', () => {
+    const kb = buildChannelKeyboard([], [], 'd1', true);
+    const buttons = kb.inline_keyboard.flat();
+    assert.strictEqual(buttons.length, 1);
+    assert.strictEqual(buttons[0]?.callback_data, 'back_accts');
+  });
+});
+
+describe('buildAccountKeyboard', () => {
+  it('should create a button per discord account', () => {
+    const kb = buildAccountKeyboard(['user#1234', 'alt#5678'], ['d1', 'd2']);
+    const buttons = kb.inline_keyboard.flat();
+    assert.strictEqual(buttons.length, 2);
+    assert.ok(buttons[0]?.text.includes('user#1234'));
+    assert.ok(buttons[1]?.text.includes('alt#5678'));
+  });
+
+  it('should set callback_data with acct_ prefix', () => {
+    const kb = buildAccountKeyboard(['user#1234'], ['d1']);
+    const buttons = kb.inline_keyboard.flat();
+    assert.strictEqual(buttons[0]?.callback_data, 'acct_d1');
+  });
+
+  it('should return empty keyboard for no accounts', () => {
+    const kb = buildAccountKeyboard([], []);
     assert.strictEqual(kb.inline_keyboard.flat().length, 0);
   });
 });
@@ -66,11 +109,10 @@ describe('mergeChannelEntries', () => {
   });
 
   it('should not duplicate channels for user with multiple discord accounts on same guild', () => {
-    // Simulate: two discord accounts both see the same guild → setAvailableChannels called twice
     let entries: ChannelEntry[] = [];
-    entries = mergeChannelEntries(entries, guild1Channels); // first discord account
-    entries = mergeChannelEntries(entries, guild1Channels); // second discord account
-    entries = mergeChannelEntries(entries, guild2Channels); // different guild
+    entries = mergeChannelEntries(entries, guild1Channels);
+    entries = mergeChannelEntries(entries, guild1Channels);
+    entries = mergeChannelEntries(entries, guild2Channels);
     assert.strictEqual(entries.length, 3);
     assert.deepStrictEqual(
       entries.map((e) => e.id),
@@ -123,7 +165,6 @@ describe('confirmDiscordCode integration', () => {
   });
 
   it('should link discord account via store.addDiscordLink', () => {
-    // Simulate what confirmDiscordCode does internally via store
     store.addDiscordLink('telegram123', 'user#1234', 'discord999');
     const user = store.getUser('telegram123');
     assert.ok(user);
@@ -138,5 +179,50 @@ describe('confirmDiscordCode integration', () => {
     assert.ok(user);
     assert.strictEqual(user.discordTags.length, 2);
     assert.strictEqual(user.discordIds.length, 2);
+  });
+
+  it('should not duplicate the same discord account for the same telegram user', () => {
+    store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    const user = store.getUser('telegram123');
+    assert.ok(user);
+    assert.strictEqual(user.discordTags.length, 1, 'tag must not be duplicated');
+    assert.strictEqual(user.discordIds.length, 1, 'id must not be duplicated');
+  });
+
+  it('should return false when discord account is already linked', () => {
+    const first = store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    const second = store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    assert.strictEqual(first, true);
+    assert.strictEqual(second, false);
+  });
+
+  it('should allow the same discord account to link to different telegram users', () => {
+    store.addDiscordLink('telegram111', 'user#1234', 'discord999');
+    store.addDiscordLink('telegram222', 'user#1234', 'discord999');
+    const user1 = store.getUser('telegram111');
+    const user2 = store.getUser('telegram222');
+    assert.ok(user1);
+    assert.ok(user2);
+    assert.deepStrictEqual(user1.discordIds, ['discord999']);
+    assert.deepStrictEqual(user2.discordIds, ['discord999']);
+  });
+
+  it('should not emit userLinked when discord account is already linked', () => {
+    let linkCount = 0;
+    store.on('userLinked', () => {
+      linkCount++;
+    });
+    store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    assert.strictEqual(linkCount, 1, 'userLinked must fire only once for same account');
+  });
+
+  it('should initialize per-account channels for each linked account', () => {
+    store.addDiscordLink('telegram123', 'user#1234', 'discord999');
+    store.addDiscordLink('telegram123', 'alt#5678', 'discord888');
+    const user = store.getUser('telegram123');
+    assert.ok(user);
+    assert.deepStrictEqual(user.channels, { discord999: [], discord888: [] });
   });
 });

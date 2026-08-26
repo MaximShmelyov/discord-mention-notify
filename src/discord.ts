@@ -77,7 +77,7 @@ export function createDiscordBot(
   }
 
   // --- Push channels to newly linked users (enabled by default) ---
-  store.on('userLinked', (telegramId: string) => {
+  store.on('userLinked', (telegramId: string, discordId: string) => {
     const allChannelIds: string[] = [];
     for (const entries of Object.values(channelCache)) {
       telegram.setAvailableChannels(telegramId, entries);
@@ -85,9 +85,9 @@ export function createDiscordBot(
         allChannelIds.push(entry.id);
       }
     }
-    store.enableChannels(telegramId, allChannelIds);
+    store.enableChannels(telegramId, discordId, allChannelIds);
     log(
-      `📡 Channels pushed to newly linked user TG=${telegramId} (${allChannelIds.length} enabled)`,
+      `📡 Channels pushed to newly linked user TG=${telegramId} Discord=${discordId} (${allChannelIds.length} enabled)`,
     );
   });
 
@@ -163,8 +163,14 @@ export function createDiscordBot(
         const code = match[1]!;
         const discordTag = message.author.tag;
         const discordId = message.author.id;
+        const discordUsername = message.author.username;
 
-        const telegramId = telegram.confirmDiscordCode(code, discordTag, discordId);
+        const telegramId = telegram.confirmDiscordCode(
+          code,
+          discordTag,
+          discordId,
+          discordUsername,
+        );
         if (telegramId) {
           const locale = store.getUserLocale(telegramId);
           await message.reply(t(locale, 'discord.verification.success'));
@@ -184,7 +190,8 @@ export function createDiscordBot(
       const users = store.getAll();
       for (const [telegramUserId, userRecord] of Object.entries(users)) {
         for (const discordAcctId of userRecord.discordIds) {
-          if (mentions.has(discordAcctId) && userRecord.channels.includes(message.channel.id)) {
+          const accountChannels = userRecord.channels[discordAcctId] ?? [];
+          if (mentions.has(discordAcctId) && accountChannels.includes(message.channel.id)) {
             const locale = store.getUserLocale(telegramUserId);
             const notify = formatMentionMessage(message, locale);
             await telegram.sendNotification(telegramUserId, notify);

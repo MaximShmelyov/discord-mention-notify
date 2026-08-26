@@ -9,14 +9,17 @@
 
   "telegram.start": "👋 Hello! Use /register to sign up, /list to manage tracked channels, or /lang to change language.",
 
-  "telegram.register.prompt": "🧾 Send me your Discord tag (e.g. user#1234), or multiple tags separated by commas:",
+  "telegram.register.prompt": "🧾 Send me your Discord username (e.g. username) or tag (e.g. user#1234):",
   "telegram.register.timeout": "⏰ Timed out. Use /register again.",
-  "telegram.register.invalidTags": "❌ Could not parse tags. Try /register again.",
+  "telegram.register.invalidTag": "❌ Please send exactly one Discord account. No commas — use /register again for each account.",
   "telegram.register.sendCode": "📨 Now send the following message in Discord (from the account you specified):\n\nVERIFICATION CODE: {code}",
   "telegram.register.confirmed": "✅ Successfully registered Discord user {discordTag}",
+  "telegram.register.alreadyLinked": "⚠️ Discord account {discordTag} is already linked to your Telegram.",
 
   "telegram.list.notRegistered": "⚠️ You are not registered. Use /register.",
   "telegram.list.noChannels": "⚠️ Channels have not loaded yet. Please wait for the Discord bot to update the list.",
+  "telegram.list.selectAccount": "👤 Choose a Discord account:",
+  "telegram.list.accountHeader": "🛠 Channels for {discordTag}:",
   "telegram.list.header": "🛠 Choose channels to track:",
   "telegram.channel.saved": "✅ Saved",
 

@@ -9,14 +9,17 @@
 
   "telegram.start": "👋 Привет! Используй /register для регистрации, /list для управления отслеживанием или /lang для смены языка.",
 
-  "telegram.register.prompt": "🧾 Отправь мне свой Discord тег (например, user#1234) или несколько через запятую:",
+  "telegram.register.prompt": "🧾 Отправь мне свой Discord username (например, username) или тег (например, user#1234):",
   "telegram.register.timeout": "⏰ Время ожидания истекло. Используй /register заново.",
-  "telegram.register.invalidTags": "❌ Не удалось распознать теги. Попробуй /register заново.",
+  "telegram.register.invalidTag": "❌ Отправь только один аккаунт Discord. Без запятых — используй /register заново для каждого аккаунта.",
   "telegram.register.sendCode": "📨 Теперь отправь следующее сообщение в Discord (от указанного аккаунта):\n\nКОД ПОДТВЕРЖДЕНИЯ: {code}",
   "telegram.register.confirmed": "✅ Успешно зарегистрирован Discord-пользователь {discordTag}",
+  "telegram.register.alreadyLinked": "⚠️ Discord-аккаунт {discordTag} уже привязан к твоему Telegram.",
 
   "telegram.list.notRegistered": "⚠️ Ты не зарегистрирован. Используй /register.",
   "telegram.list.noChannels": "⚠️ Каналы ещё не загружены. Пожалуйста, подожди, пока Discord-бот обновит список.",
+  "telegram.list.selectAccount": "👤 Выбери Discord-аккаунт:",
+  "telegram.list.accountHeader": "🛠 Каналы для {discordTag}:",
   "telegram.list.header": "🛠 Выбери каналы для отслеживания:",
   "telegram.channel.saved": "✅ Сохранено",
 

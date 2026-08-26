@@ -3,7 +3,8 @@ export type Locale = 'ru' | 'en';
 export interface UserRecord {
   discordTags: string[];
   discordIds: string[];
-  channels: string[];
+  /** Per-account channel subscriptions: discordId → enabled channelIds */
+  channels: Record<string, string[]>;
   locale?: Locale;
 }
 
@@ -29,7 +30,12 @@ export interface Logger {
 }
 
 export interface TelegramBotHandle {
-  confirmDiscordCode(code: string, discordTag: string, discordId: string): string | null;
+  confirmDiscordCode(
+    code: string,
+    discordTag: string,
+    discordId: string,
+    discordUsername: string,
+  ): string | null;
   setAvailableChannels(telegramUserId: string, entries: ChannelEntry[]): void;
   sendNotification(chatId: string, text: string): Promise<void>;
   startPolling(): Promise<void>;

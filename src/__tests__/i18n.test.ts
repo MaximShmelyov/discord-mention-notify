@@ -59,3 +59,61 @@ describe('DEFAULT_LOCALE', () => {
     assert.strictEqual(DEFAULT_LOCALE, 'en');
   });
 });
+
+describe('registration locale keys', () => {
+  it('should have invalidTag key for single-account validation (en)', () => {
+    const result = t('en', 'telegram.register.invalidTag');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.register.invalidTag', 'key must exist in en locale');
+  });
+
+  it('should have invalidTag key for single-account validation (ru)', () => {
+    const result = t('ru', 'telegram.register.invalidTag');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.register.invalidTag', 'key must exist in ru locale');
+  });
+
+  it('should have alreadyLinked key for duplicate prevention (en)', () => {
+    const result = t('en', 'telegram.register.alreadyLinked', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.register.alreadyLinked', 'key must exist in en locale');
+  });
+
+  it('should have alreadyLinked key for duplicate prevention (ru)', () => {
+    const result = t('ru', 'telegram.register.alreadyLinked', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.register.alreadyLinked', 'key must exist in ru locale');
+  });
+
+  it('should mention username in register prompt (en)', () => {
+    const prompt = t('en', 'telegram.register.prompt');
+    assert.ok(prompt.includes('username'), 'en prompt must mention username format');
+  });
+
+  it('should mention username in register prompt (ru)', () => {
+    const prompt = t('ru', 'telegram.register.prompt');
+    assert.ok(prompt.includes('username'), 'ru prompt must mention username format');
+  });
+
+  it('should have selectAccount key for account picker (en)', () => {
+    const result = t('en', 'telegram.list.selectAccount');
+    assert.notStrictEqual(result, 'telegram.list.selectAccount', 'key must exist in en locale');
+  });
+
+  it('should have selectAccount key for account picker (ru)', () => {
+    const result = t('ru', 'telegram.list.selectAccount');
+    assert.notStrictEqual(result, 'telegram.list.selectAccount', 'key must exist in ru locale');
+  });
+
+  it('should have accountHeader key with interpolation (en)', () => {
+    const result = t('en', 'telegram.list.accountHeader', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.list.accountHeader', 'key must exist in en locale');
+  });
+
+  it('should have accountHeader key with interpolation (ru)', () => {
+    const result = t('ru', 'telegram.list.accountHeader', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.list.accountHeader', 'key must exist in ru locale');
+  });
+});

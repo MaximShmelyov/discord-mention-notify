@@ -75,14 +75,21 @@ This triggers the full CI pipeline and, on success, publishes the image as `ghcr
 ### Registration
 
 1. User sends `/register` to the Telegram bot
-2. Enters their Discord tag (or multiple, comma-separated)
+2. Enters their Discord username (e.g. `username`) or legacy tag (e.g. `user#1234`) — one account at a time
 3. Receives a one-time verification code
-4. Sends `КОД ПОДТВЕРЖДЕНИЯ: <code>` as a **DM to the Discord bot**
-5. Accounts are linked ✅
+4. Sends `VERIFICATION CODE: <code>` (or `КОД ПОДТВЕРЖДЕНИЯ: <code>`) as a **DM to the Discord bot**
+5. Account is linked ✅
+
+To link multiple Discord accounts, repeat `/register` for each one. Duplicate accounts are detected and rejected.
 
 ### Channel Tracking
 
-The `/list` command in Telegram shows an inline keyboard with all text channels from whitelisted servers. Each channel is a ✅/❌ toggle.
+The `/list` command in Telegram lets you manage channel subscriptions per Discord account:
+
+- **Single account** — shows a channel list with ✅/❌ toggles directly
+- **Multiple accounts** — shows an account picker first; tap an account to see its channels, use ← Back to return
+
+Each Discord account has its own set of enabled channels, so you can track different channels for different accounts.
 
 ### Notifications
 
@@ -102,6 +109,8 @@ AuthorName(author#tag): message text
 | `/start`    | Welcome message and help |
 | `/register` | Link a Discord account   |
 | `/list`     | Manage tracked channels  |
+| `/lang`     | Change language (en/ru)  |
+| `/help`     | Show available commands  |
 
 ## Project Structure
 
