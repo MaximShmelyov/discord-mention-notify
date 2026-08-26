@@ -25,10 +25,11 @@ async function main(): Promise<void> {
   mainLogger.log('All systems started');
 
   // Graceful shutdown
-  const shutdown = (): void => {
+  const shutdown = async (): Promise<void> => {
     mainLogger.log('Shutting down...');
     telegram.stopPolling();
     discord.destroy();
+    await store.flush();
     process.exit(0);
   };
 

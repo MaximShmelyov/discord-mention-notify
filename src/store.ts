@@ -4,9 +4,13 @@ import { DEFAULT_LOCALE } from './i18n.js';
 import type { Locale, DiscordAccount, UserRecord, UserDB, Logger } from './types.js';
 
 export class Store extends EventEmitter {
+  private static readonly DEBOUNCE_MS = 500;
+
   private db: UserDB = {};
   private readonly filePath: string;
   private readonly logger: Logger;
+  private dirty = false;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(filePath: string, logger: Logger) {
     super();
@@ -47,7 +51,7 @@ export class Store extends EventEmitter {
       }
     }
     if (migrated) {
-      this.save();
+      this.saveSync();
       this.logger.log('Migrated channels from flat array to per-account format');
     }
   }
@@ -76,12 +80,13 @@ export class Store extends EventEmitter {
       }
     }
     if (migrated) {
-      this.save();
+      this.saveSync();
       this.logger.log('Migrated discordTags/discordIds to discordAccounts');
     }
   }
 
-  save(): void {
+  /** Synchronous write used by migrations (called during load, before event loop). */
+  private saveSync(): void {
     try {
       fs.writeFileSync(this.filePath, JSON.stringify(this.db, null, 2));
     } catch (error) {
@@ -89,6 +94,46 @@ export class Store extends EventEmitter {
         `Failed to save user DB: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  /** Schedule a debounced write to disk. */
+  save(): void {
+    this.dirty = true;
+    if (this.saveTimer) return;
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      this.writeToDisk();
+    }, Store.DEBOUNCE_MS);
+  }
+
+  /** Immediately flush pending changes to disk (for graceful shutdown). */
+  async flush(): Promise<void> {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    if (this.dirty) {
+      this.dirty = false;
+      try {
+        await fs.promises.writeFile(this.filePath, JSON.stringify(this.db, null, 2));
+      } catch (error) {
+        this.logger.log(
+          `Failed to flush user DB: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  }
+
+  private writeToDisk(): void {
+    if (!this.dirty) return;
+    this.dirty = false;
+    fs.promises
+      .writeFile(this.filePath, JSON.stringify(this.db, null, 2))
+      .catch((error: unknown) => {
+        this.logger.log(
+          `Failed to save user DB: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
   }
 
   getAll(): UserDB {

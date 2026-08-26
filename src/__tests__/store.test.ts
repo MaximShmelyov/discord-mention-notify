@@ -121,9 +121,10 @@ describe('Store', () => {
       assert.ok(store.hasUser('12345'));
     });
 
-    it('should persist to disk', () => {
+    it('should persist to disk', async () => {
       store.load();
       store.createUser('12345');
+      await store.flush();
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
       assert.ok('12345' in raw);
     });
@@ -273,11 +274,12 @@ describe('Store', () => {
       assert.deepStrictEqual(store.getAccountChannels('12345', 'd2'), ['ch2']);
     });
 
-    it('should persist to disk', () => {
+    it('should persist to disk', async () => {
       store.load();
       store.addDiscordLink('12345', 'user#1234', 'd1');
       store.addDiscordLink('12345', 'alt#5678', 'd2');
       store.removeDiscordLink('12345', 'd1');
+      await store.flush();
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
       assert.deepStrictEqual(raw['12345'].discordAccounts, [{ tag: 'alt#5678', id: 'd2' }]);
     });
@@ -337,10 +339,11 @@ describe('Store', () => {
       assert.strictEqual(result, false);
     });
 
-    it('should persist changes to disk', () => {
+    it('should persist changes to disk', async () => {
       store.load();
       store.addDiscordLink('12345', 'user#1234', 'd1');
       store.toggleChannel('12345', 'd1', 'ch1');
+      await store.flush();
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
       assert.deepStrictEqual(raw['12345'].channels['d1'], ['ch1']);
     });
@@ -430,9 +433,10 @@ describe('Store', () => {
       assert.strictEqual(store.getUserLocale('12345'), 'ru');
     });
 
-    it('should persist to disk', () => {
+    it('should persist to disk', async () => {
       store.load();
       store.setUserLocale('12345', 'ru');
+      await store.flush();
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
       assert.strictEqual(raw['12345'].locale, 'ru');
     });
@@ -522,13 +526,12 @@ describe('Store', () => {
   });
 
   describe('save error handling', () => {
-    it('should not throw on write error', () => {
+    it('should not throw on write error', async () => {
       const badStore = new Store('/nonexistent/path/db.json', createSilentLogger());
       badStore.load();
-      // This should log an error but not throw
-      assert.doesNotThrow(() => {
-        badStore.createUser('12345');
-      });
+      // createUser schedules a debounced save — flush triggers the actual write
+      badStore.createUser('12345');
+      await assert.doesNotReject(() => badStore.flush());
     });
   });
 });
