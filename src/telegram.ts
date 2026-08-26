@@ -17,6 +17,15 @@ interface PendingVerification {
 
 // --- Pure helpers (exported for testing) ---
 
+export function mergeChannelEntries(
+  existing: ChannelEntry[],
+  incoming: ChannelEntry[],
+): ChannelEntry[] {
+  const seen = new Set(existing.map((e) => e.id));
+  const unique = incoming.filter((e) => !seen.has(e.id));
+  return existing.concat(unique);
+}
+
 export function buildChannelKeyboard(
   entries: ChannelEntry[],
   userChannels: string[],
@@ -275,7 +284,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
   function setAvailableChannels(telegramUserId: string, entries: ChannelEntry[]): void {
     const existing = availableChannels.get(telegramUserId) ?? [];
-    availableChannels.set(telegramUserId, existing.concat(entries));
+    availableChannels.set(telegramUserId, mergeChannelEntries(existing, entries));
     log(
       `📡 Channels updated for TG=${telegramUserId} (${availableChannels.get(telegramUserId)!.length} total)`,
     );

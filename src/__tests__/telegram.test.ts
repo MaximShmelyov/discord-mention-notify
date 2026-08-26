@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { buildChannelKeyboard } from '../telegram.js';
+import { buildChannelKeyboard, mergeChannelEntries } from '../telegram.js';
 import { Store } from '../store.js';
 import type { Logger, ChannelEntry } from '../types.js';
 
@@ -43,6 +43,66 @@ describe('buildChannelKeyboard', () => {
     const kb = buildChannelKeyboard([], []);
     // All rows should be empty or the keyboard itself
     assert.strictEqual(kb.inline_keyboard.flat().length, 0);
+  });
+});
+
+describe('mergeChannelEntries', () => {
+  const guild1Channels: ChannelEntry[] = [
+    { guildName: 'Server1', channelName: 'general', id: 'ch1' },
+    { guildName: 'Server1', channelName: 'dev', id: 'ch2' },
+  ];
+  const guild2Channels: ChannelEntry[] = [
+    { guildName: 'Server2', channelName: 'random', id: 'ch3' },
+  ];
+
+  it('should not produce duplicates when same channels are added twice', () => {
+    const first = mergeChannelEntries([], guild1Channels);
+    const second = mergeChannelEntries(first, guild1Channels);
+    assert.strictEqual(second.length, 2);
+    assert.deepStrictEqual(
+      second.map((e) => e.id),
+      ['ch1', 'ch2'],
+    );
+  });
+
+  it('should not duplicate channels for user with multiple discord accounts on same guild', () => {
+    // Simulate: two discord accounts both see the same guild → setAvailableChannels called twice
+    let entries: ChannelEntry[] = [];
+    entries = mergeChannelEntries(entries, guild1Channels); // first discord account
+    entries = mergeChannelEntries(entries, guild1Channels); // second discord account
+    entries = mergeChannelEntries(entries, guild2Channels); // different guild
+    assert.strictEqual(entries.length, 3);
+    assert.deepStrictEqual(
+      entries.map((e) => e.id),
+      ['ch1', 'ch2', 'ch3'],
+    );
+  });
+
+  it('should add non-overlapping entries from different guilds', () => {
+    const merged = mergeChannelEntries(guild1Channels, guild2Channels);
+    assert.strictEqual(merged.length, 3);
+    assert.deepStrictEqual(
+      merged.map((e) => e.id),
+      ['ch1', 'ch2', 'ch3'],
+    );
+  });
+
+  it('should keep only unique entries on partial overlap', () => {
+    const overlap: ChannelEntry[] = [
+      { guildName: 'Server1', channelName: 'general', id: 'ch1' },
+      { guildName: 'Server3', channelName: 'music', id: 'ch4' },
+    ];
+    const merged = mergeChannelEntries(guild1Channels, overlap);
+    assert.strictEqual(merged.length, 3);
+    assert.deepStrictEqual(
+      merged.map((e) => e.id),
+      ['ch1', 'ch2', 'ch4'],
+    );
+  });
+
+  it('should return empty array when both inputs are empty', () => {
+    const merged = mergeChannelEntries([], []);
+    assert.strictEqual(merged.length, 0);
   });
 });
 
