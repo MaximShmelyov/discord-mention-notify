@@ -395,13 +395,17 @@ describe('Store', () => {
   });
 
   describe('getAll', () => {
-    it('should return a shallow copy', () => {
+    it('should return a deep copy', () => {
       store.load();
-      store.createUser('12345');
+      store.addDiscordLink('12345', 'user#1234', '999');
       const all = store.getAll();
-      // Modifying returned object should not affect store
+      // Top-level modification should not affect store
       delete all['12345'];
       assert.ok(store.hasUser('12345'));
+      // Deep modification should not affect store either
+      const all2 = store.getAll();
+      all2['12345']!.discordAccounts.push({ tag: 'fake', id: 'fake' });
+      assert.strictEqual(store.getUser('12345')!.discordAccounts.length, 1);
     });
   });
 

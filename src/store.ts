@@ -137,7 +137,7 @@ export class Store extends EventEmitter {
   }
 
   getAll(): UserDB {
-    return { ...this.db };
+    return structuredClone(this.db);
   }
 
   getUser(telegramId: string): UserRecord | undefined {
