@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { buildChannelKeyboard, buildAccountKeyboard, mergeChannelEntries } from '../telegram.js';
+import {
+  buildChannelKeyboard,
+  buildAccountKeyboard,
+  buildUnregisterKeyboard,
+  mergeChannelEntries,
+} from '../telegram.js';
 import { Store } from '../store.js';
 import type { Logger, ChannelEntry } from '../types.js';
 
@@ -85,6 +90,28 @@ describe('buildAccountKeyboard', () => {
 
   it('should return empty keyboard for no accounts', () => {
     const kb = buildAccountKeyboard([], []);
+    assert.strictEqual(kb.inline_keyboard.flat().length, 0);
+  });
+});
+
+describe('buildUnregisterKeyboard', () => {
+  it('should create a button per discord account with ❌ prefix', () => {
+    const kb = buildUnregisterKeyboard(['user#1234', 'alt#5678'], ['d1', 'd2']);
+    const buttons = kb.inline_keyboard.flat();
+    assert.strictEqual(buttons.length, 2);
+    assert.ok(buttons[0]?.text.includes('❌'));
+    assert.ok(buttons[0]?.text.includes('user#1234'));
+    assert.ok(buttons[1]?.text.includes('alt#5678'));
+  });
+
+  it('should set callback_data with unreg_ prefix', () => {
+    const kb = buildUnregisterKeyboard(['user#1234'], ['d1']);
+    const buttons = kb.inline_keyboard.flat();
+    assert.strictEqual(buttons[0]?.callback_data, 'unreg_d1');
+  });
+
+  it('should return empty keyboard for no accounts', () => {
+    const kb = buildUnregisterKeyboard([], []);
     assert.strictEqual(kb.inline_keyboard.flat().length, 0);
   });
 });

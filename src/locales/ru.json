@@ -16,6 +16,11 @@
   "telegram.register.confirmed": "✅ Успешно зарегистрирован Discord-пользователь {discordTag}",
   "telegram.register.alreadyLinked": "⚠️ Discord-аккаунт {discordTag} уже привязан к твоему Telegram.",
 
+  "telegram.unregister.prompt": "🗑️ Выбери Discord-аккаунт для отвязки:",
+  "telegram.unregister.noAccounts": "⚠️ У тебя нет привязанных Discord-аккаунтов.",
+  "telegram.unregister.done": "✅ Discord-аккаунт {discordTag} отвязан.",
+  "telegram.unregister.allRemoved": "🗑️ Все Discord-аккаунты отвязаны. Используй /register для привязки нового.",
+
   "telegram.list.notRegistered": "⚠️ Ты не зарегистрирован. Используй /register.",
   "telegram.list.noChannels": "⚠️ Каналы ещё не загружены. Пожалуйста, подожди, пока Discord-бот обновит список.",
   "telegram.list.selectAccount": "👤 Выбери Discord-аккаунт:",
@@ -26,6 +31,6 @@
   "telegram.lang.prompt": "🌐 Выбери язык:",
   "telegram.lang.saved": "✅ Язык сохранён",
 
-  "telegram.help": "📖 Доступные команды:\n\n/register — Привязать аккаунт Discord\n/list — Управление отслеживаемыми каналами\n/lang — Сменить язык\n/help — Показать эту справку",
+  "telegram.help": "📖 Доступные команды:\n\n/register — Привязать аккаунт Discord\n/unregister — Отвязать аккаунт Discord\n/list — Управление отслеживаемыми каналами\n/lang — Сменить язык\n/help — Показать эту справку",
   "telegram.unknownCommand": "❓ Неизвестная команда. Используй /help для списка команд."
 }

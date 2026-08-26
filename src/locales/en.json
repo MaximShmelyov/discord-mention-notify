@@ -16,6 +16,11 @@
   "telegram.register.confirmed": "✅ Successfully registered Discord user {discordTag}",
   "telegram.register.alreadyLinked": "⚠️ Discord account {discordTag} is already linked to your Telegram.",
 
+  "telegram.unregister.prompt": "🗑️ Choose a Discord account to unlink:",
+  "telegram.unregister.noAccounts": "⚠️ You have no linked Discord accounts.",
+  "telegram.unregister.done": "✅ Discord account {discordTag} has been unlinked.",
+  "telegram.unregister.allRemoved": "🗑️ All Discord accounts have been unlinked. Use /register to link a new one.",
+
   "telegram.list.notRegistered": "⚠️ You are not registered. Use /register.",
   "telegram.list.noChannels": "⚠️ Channels have not loaded yet. Please wait for the Discord bot to update the list.",
   "telegram.list.selectAccount": "👤 Choose a Discord account:",
@@ -26,6 +31,6 @@
   "telegram.lang.prompt": "🌐 Choose your language:",
   "telegram.lang.saved": "✅ Language saved",
 
-  "telegram.help": "📖 Available commands:\n\n/register — Link your Discord account\n/list — Manage tracked channels\n/lang — Change language\n/help — Show this help message",
+  "telegram.help": "📖 Available commands:\n\n/register — Link your Discord account\n/unregister — Unlink a Discord account\n/list — Manage tracked channels\n/lang — Change language\n/help — Show this help message",
   "telegram.unknownCommand": "❓ Unknown command. Use /help to see available commands."
 }

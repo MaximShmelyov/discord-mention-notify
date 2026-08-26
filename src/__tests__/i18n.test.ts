@@ -116,4 +116,52 @@ describe('registration locale keys', () => {
     assert.ok(result.includes('test#0'));
     assert.notStrictEqual(result, 'telegram.list.accountHeader', 'key must exist in ru locale');
   });
+
+  it('should have unregister.prompt key (en)', () => {
+    const result = t('en', 'telegram.unregister.prompt');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.prompt', 'key must exist in en locale');
+  });
+
+  it('should have unregister.prompt key (ru)', () => {
+    const result = t('ru', 'telegram.unregister.prompt');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.prompt', 'key must exist in ru locale');
+  });
+
+  it('should have unregister.noAccounts key (en)', () => {
+    const result = t('en', 'telegram.unregister.noAccounts');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.noAccounts', 'key must exist in en locale');
+  });
+
+  it('should have unregister.noAccounts key (ru)', () => {
+    const result = t('ru', 'telegram.unregister.noAccounts');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.noAccounts', 'key must exist in ru locale');
+  });
+
+  it('should have unregister.done key with interpolation (en)', () => {
+    const result = t('en', 'telegram.unregister.done', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.unregister.done', 'key must exist in en locale');
+  });
+
+  it('should have unregister.done key with interpolation (ru)', () => {
+    const result = t('ru', 'telegram.unregister.done', { discordTag: 'test#0' });
+    assert.ok(result.includes('test#0'));
+    assert.notStrictEqual(result, 'telegram.unregister.done', 'key must exist in ru locale');
+  });
+
+  it('should have unregister.allRemoved key (en)', () => {
+    const result = t('en', 'telegram.unregister.allRemoved');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.allRemoved', 'key must exist in en locale');
+  });
+
+  it('should have unregister.allRemoved key (ru)', () => {
+    const result = t('ru', 'telegram.unregister.allRemoved');
+    assert.ok(result.length > 0);
+    assert.notStrictEqual(result, 'telegram.unregister.allRemoved', 'key must exist in ru locale');
+  });
 });

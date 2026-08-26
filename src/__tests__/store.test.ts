@@ -203,6 +203,83 @@ describe('Store', () => {
     });
   });
 
+  describe('removeDiscordLink', () => {
+    it('should remove a linked discord account', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      store.addDiscordLink('12345', 'alt#5678', 'd2');
+      const removed = store.removeDiscordLink('12345', 'd1');
+      assert.strictEqual(removed, true);
+      const user = store.getUser('12345');
+      assert.ok(user);
+      assert.deepStrictEqual(user.discordTags, ['alt#5678']);
+      assert.deepStrictEqual(user.discordIds, ['d2']);
+    });
+
+    it('should delete channel subscriptions for the removed account', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      store.enableChannels('12345', 'd1', ['ch1', 'ch2']);
+      store.removeDiscordLink('12345', 'd1');
+      assert.deepStrictEqual(store.getAccountChannels('12345', 'd1'), []);
+      const user = store.getUser('12345');
+      assert.ok(user);
+      assert.strictEqual('d1' in user.channels, false);
+    });
+
+    it('should return false for non-existent user', () => {
+      store.load();
+      assert.strictEqual(store.removeDiscordLink('unknown', 'd1'), false);
+    });
+
+    it('should return false for non-existent discord account', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      assert.strictEqual(store.removeDiscordLink('12345', 'd999'), false);
+    });
+
+    it('should not affect other accounts', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      store.addDiscordLink('12345', 'alt#5678', 'd2');
+      store.enableChannels('12345', 'd1', ['ch1']);
+      store.enableChannels('12345', 'd2', ['ch2']);
+      store.removeDiscordLink('12345', 'd1');
+      assert.deepStrictEqual(store.getAccountChannels('12345', 'd2'), ['ch2']);
+    });
+
+    it('should persist to disk', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      store.addDiscordLink('12345', 'alt#5678', 'd2');
+      store.removeDiscordLink('12345', 'd1');
+      const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
+      assert.deepStrictEqual(raw['12345'].discordIds, ['d2']);
+      assert.deepStrictEqual(raw['12345'].discordTags, ['alt#5678']);
+    });
+
+    it('should emit change event', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      let changeCount = 0;
+      store.on('change', () => {
+        changeCount++;
+      });
+      store.removeDiscordLink('12345', 'd1');
+      assert.strictEqual(changeCount, 1);
+    });
+
+    it('should keep user record when last account is removed', () => {
+      store.load();
+      store.addDiscordLink('12345', 'user#1234', 'd1');
+      store.removeDiscordLink('12345', 'd1');
+      assert.ok(store.hasUser('12345'), 'user record must still exist');
+      const user = store.getUser('12345');
+      assert.ok(user);
+      assert.strictEqual(user.discordIds.length, 0);
+    });
+  });
+
   describe('toggleChannel (per-account)', () => {
     it('should add channel for specific discord account', () => {
       store.load();

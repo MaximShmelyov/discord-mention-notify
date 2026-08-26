@@ -57,6 +57,17 @@ export function buildAccountKeyboard(
   return kb.build();
 }
 
+export function buildUnregisterKeyboard(
+  discordTags: string[],
+  discordIds: string[],
+): ReturnType<InlineKeyboardBuilder['build']> {
+  const kb = new InlineKeyboardBuilder();
+  for (let i = 0; i < discordIds.length; i++) {
+    kb.text(`❌ ${discordTags[i]}`, `unreg_${discordIds[i]}`).row();
+  }
+  return kb.build();
+}
+
 export function buildLangKeyboard(
   currentLocale: Locale,
 ): ReturnType<InlineKeyboardBuilder['build']> {
@@ -68,7 +79,7 @@ export function buildLangKeyboard(
 
 // --- Factory ---
 
-const KNOWN_COMMANDS = new Set(['start', 'register', 'list', 'lang', 'help']);
+const KNOWN_COMMANDS = new Set(['start', 'register', 'unregister', 'list', 'lang', 'help']);
 
 export function createTelegramBot(config: Config, store: Store, logger: Logger): TelegramBotHandle {
   const bot = new Bot(config.TELEGRAM_TOKEN);
@@ -118,6 +129,22 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     log(`/register from ${ctx.from?.username ?? chatId}`);
     awaitingTags.set(chatIdStr, Date.now());
     return ctx.reply(t(loc(chatIdStr), 'telegram.register.prompt'));
+  });
+
+  bot.command('unregister', (ctx: Context) => {
+    const chatId = ctx.chatId;
+    if (chatId == null) return;
+    const chatIdStr = String(chatId);
+    log(`/unregister from ${ctx.from?.username ?? chatId}`);
+
+    const user = store.getUser(chatIdStr);
+    if (!user || user.discordIds.length === 0) {
+      return ctx.reply(t(loc(chatIdStr), 'telegram.unregister.noAccounts'));
+    }
+
+    return ctx.reply(t(loc(chatIdStr), 'telegram.unregister.prompt'), {
+      reply_markup: buildUnregisterKeyboard(user.discordTags, user.discordIds),
+    });
   });
 
   bot.command('list', (ctx: Context) => {
@@ -289,6 +316,49 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
             text: t(loc(chatIdStr), 'telegram.list.selectAccount'),
             reply_markup: buildAccountKeyboard(user.discordTags, user.discordIds),
           });
+        } catch {
+          /* ignore edit errors */
+        }
+      }
+      return;
+    }
+
+    // --- Unregister account (unreg_{discordId}) ---
+    if (cbq.data.startsWith('unreg_')) {
+      const discordId = cbq.data.slice('unreg_'.length);
+      const tagIndex = user.discordIds.indexOf(discordId);
+      if (tagIndex === -1) return;
+
+      const discordTag = user.discordTags[tagIndex]!;
+      store.removeDiscordLink(chatIdStr, discordId);
+
+      log(`🗑️ TG=${chatIdStr} unlinked Discord=${discordTag} (${discordId})`);
+
+      await ctx.answerCallbackQuery({
+        text: t(loc(chatIdStr), 'telegram.unregister.done', { discordTag }),
+      });
+
+      // Update the keyboard — remove the unlinked account
+      const updatedUser = store.getUser(chatIdStr);
+      if (cbq.message) {
+        try {
+          if (!updatedUser || updatedUser.discordIds.length === 0) {
+            // No accounts left — replace with a text message
+            await bot.api.editMessageText({
+              chat_id: chatId,
+              message_id: cbq.message.message_id,
+              text: t(loc(chatIdStr), 'telegram.unregister.allRemoved'),
+            });
+          } else {
+            await bot.api.editMessageReplyMarkup({
+              chat_id: chatId,
+              message_id: cbq.message.message_id,
+              reply_markup: buildUnregisterKeyboard(
+                updatedUser.discordTags,
+                updatedUser.discordIds,
+              ),
+            });
+          }
         } catch {
           /* ignore edit errors */
         }

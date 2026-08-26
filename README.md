@@ -80,7 +80,7 @@ This triggers the full CI pipeline and, on success, publishes the image as `ghcr
 4. Sends `VERIFICATION CODE: <code>` (or `КОД ПОДТВЕРЖДЕНИЯ: <code>`) as a **DM to the Discord bot**
 5. Account is linked ✅
 
-To link multiple Discord accounts, repeat `/register` for each one. Duplicate accounts are detected and rejected.
+To link multiple Discord accounts, repeat `/register` for each one. Duplicate accounts are detected and rejected. Use `/unregister` to remove a linked account.
 
 ### Channel Tracking
 
@@ -104,13 +104,14 @@ AuthorName(author#tag): message text
 
 ## Telegram Bot Commands
 
-| Command     | Description              |
-| ----------- | ------------------------ |
-| `/start`    | Welcome message and help |
-| `/register` | Link a Discord account   |
-| `/list`     | Manage tracked channels  |
-| `/lang`     | Change language (en/ru)  |
-| `/help`     | Show available commands  |
+| Command       | Description              |
+| ------------- | ------------------------ |
+| `/start`      | Welcome message and help |
+| `/register`   | Link a Discord account   |
+| `/unregister` | Unlink a Discord account |
+| `/list`       | Manage tracked channels  |
+| `/lang`       | Change language (en/ru)  |
+| `/help`       | Show available commands  |
 
 ## Project Structure
 

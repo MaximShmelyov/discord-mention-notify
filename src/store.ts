@@ -104,6 +104,21 @@ export class Store extends EventEmitter {
     return true;
   }
 
+  removeDiscordLink(telegramId: string, discordId: string): boolean {
+    const user = this.db[telegramId];
+    if (!user) return false;
+
+    const index = user.discordIds.indexOf(discordId);
+    if (index === -1) return false;
+
+    user.discordIds.splice(index, 1);
+    user.discordTags.splice(index, 1);
+    Reflect.deleteProperty(user.channels, discordId);
+    this.save();
+    this.emit('change');
+    return true;
+  }
+
   getAccountChannels(telegramId: string, discordId: string): string[] {
     return this.db[telegramId]?.channels[discordId] ?? [];
   }
