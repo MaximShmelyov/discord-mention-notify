@@ -433,6 +433,8 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
         ? `✅ Linked: TG=${pending.telegramId} <-> Discord=${discordTag}`
         : `⚠️ Already linked: TG=${pending.telegramId} <-> Discord=${discordTag}`,
     );
+    // Number() is safe here — Telegram user chat IDs are within MAX_SAFE_INTEGER.
+    // Channel/supergroup IDs can exceed it, but this bot only messages users.
     bot.api
       .sendMessage({
         chat_id: Number(pending.telegramId),
