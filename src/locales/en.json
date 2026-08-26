@@ -21,5 +21,8 @@
   "telegram.channel.saved": "✅ Saved",
 
   "telegram.lang.prompt": "🌐 Choose your language:",
-  "telegram.lang.saved": "✅ Language saved"
+  "telegram.lang.saved": "✅ Language saved",
+
+  "telegram.help": "📖 Available commands:\n\n/register — Link your Discord account\n/list — Manage tracked channels\n/lang — Change language\n/help — Show this help message",
+  "telegram.unknownCommand": "❓ Unknown command. Use /help to see available commands."
 }

@@ -93,6 +93,24 @@ export class Store extends EventEmitter {
     return undefined;
   }
 
+  enableChannels(telegramId: string, channelIds: string[]): void {
+    const user = this.db[telegramId];
+    if (!user) return;
+
+    let changed = false;
+    for (const channelId of channelIds) {
+      if (!user.channels.includes(channelId)) {
+        user.channels.push(channelId);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.save();
+      this.emit('change');
+    }
+  }
+
   toggleChannel(telegramId: string, channelId: string): boolean {
     const user = this.db[telegramId];
     if (!user) return false;

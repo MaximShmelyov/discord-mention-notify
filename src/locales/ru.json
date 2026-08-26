@@ -21,5 +21,8 @@
   "telegram.channel.saved": "✅ Сохранено",
 
   "telegram.lang.prompt": "🌐 Выбери язык:",
-  "telegram.lang.saved": "✅ Язык сохранён"
+  "telegram.lang.saved": "✅ Язык сохранён",
+
+  "telegram.help": "📖 Доступные команды:\n\n/register — Привязать аккаунт Discord\n/list — Управление отслеживаемыми каналами\n/lang — Сменить язык\n/help — Показать эту справку",
+  "telegram.unknownCommand": "❓ Неизвестная команда. Используй /help для списка команд."
 }

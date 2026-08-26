@@ -76,12 +76,17 @@ export function createDiscordBot(
     }
   }
 
-  // --- Push channels to newly linked users ---
+  // --- Push channels to newly linked users (enabled by default) ---
   store.on('userLinked', (telegramId: string) => {
+    const allChannelIds: string[] = [];
     for (const entries of Object.values(channelCache)) {
       telegram.setAvailableChannels(telegramId, entries);
+      for (const entry of entries) {
+        allChannelIds.push(entry.id);
+      }
     }
-    log(`📡 Channels pushed to newly linked user TG=${telegramId}`);
+    store.enableChannels(telegramId, allChannelIds);
+    log(`📡 Channels pushed to newly linked user TG=${telegramId} (${allChannelIds.length} enabled)`);
   });
 
   /** Resolve the locale for a Discord user via reverse lookup. */
@@ -181,7 +186,11 @@ export function createDiscordBot(
             const locale = store.getUserLocale(telegramUserId);
             const notify = formatMentionMessage(message, locale);
             await telegram.sendNotification(telegramUserId, notify);
-            log(`📤 Notification sent for ${telegramUserId}`);
+            const mentionedUser = mentions.get(discordAcctId);
+            const discordName = mentionedUser
+              ? `${mentionedUser.displayName}(${mentionedUser.tag})`
+              : discordAcctId;
+            log(`📤 Notification sent for TG=${telegramUserId}, mentioned=${discordName}`);
           }
         }
       }

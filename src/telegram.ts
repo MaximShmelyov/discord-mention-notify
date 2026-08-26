@@ -43,6 +43,8 @@ export function buildLangKeyboard(
 
 // --- Factory ---
 
+const KNOWN_COMMANDS = new Set(['start', 'register', 'list', 'lang', 'help']);
+
 export function createTelegramBot(config: Config, store: Store, logger: Logger): TelegramBotHandle {
   const bot = new Bot(config.TELEGRAM_TOKEN);
   const log = logger.log.bind(logger);
@@ -124,6 +126,12 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     });
   });
 
+  bot.command('help', (ctx: Context) => {
+    const chatIdStr = String(ctx.chatId);
+    log(`/help from ${ctx.from?.username ?? ctx.chatId}`);
+    return ctx.reply(t(loc(chatIdStr), 'telegram.help'));
+  });
+
   // --- Registration flow (message handler for tag input) ---
 
   bot.on('message', (ctx: Context) => {
@@ -135,8 +143,15 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     const timestamp = awaitingTags.get(chatIdStr);
     if (timestamp == null) return; // Not awaiting tags
 
-    // Ignore if this is a command
-    if (text.startsWith('/')) return;
+    // Handle commands — known ones are processed by bot.command(),
+    // unknown ones get an error reply
+    if (text.startsWith('/')) {
+      const command = text.split(/[\s@]/)[0]!.slice(1).toLowerCase();
+      if (!KNOWN_COMMANDS.has(command)) {
+        return ctx.reply(t(loc(chatIdStr), 'telegram.unknownCommand'));
+      }
+      return;
+    }
 
     // Check timeout
     if (Date.now() - timestamp > REGISTRATION_TIMEOUT_MS) {
