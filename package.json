@@ -19,7 +19,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "Discord-to-Telegram mention notification bridge",
   "dependencies": {
     "discord.js": "^14.19.3",
