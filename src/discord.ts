@@ -189,16 +189,16 @@ export function createDiscordBot(
 
       const users = store.getAll();
       for (const [telegramUserId, userRecord] of Object.entries(users)) {
-        for (const discordAcctId of userRecord.discordIds) {
-          const accountChannels = userRecord.channels[discordAcctId] ?? [];
-          if (mentions.has(discordAcctId) && accountChannels.includes(message.channel.id)) {
+        for (const acct of userRecord.discordAccounts) {
+          const accountChannels = userRecord.channels[acct.id] ?? [];
+          if (mentions.has(acct.id) && accountChannels.includes(message.channel.id)) {
             const locale = store.getUserLocale(telegramUserId);
             const notify = formatMentionMessage(message, locale);
             await telegram.sendNotification(telegramUserId, notify);
-            const mentionedUser = mentions.get(discordAcctId);
+            const mentionedUser = mentions.get(acct.id);
             const discordName = mentionedUser
               ? `${mentionedUser.displayName}(${mentionedUser.tag})`
-              : discordAcctId;
+              : acct.id;
             log(`📤 Notification sent for TG=${telegramUserId}, mentioned=${discordName}`);
           }
         }

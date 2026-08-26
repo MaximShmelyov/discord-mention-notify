@@ -1,8 +1,12 @@
 export type Locale = 'ru' | 'en';
 
+export interface DiscordAccount {
+  tag: string;
+  id: string;
+}
+
 export interface UserRecord {
-  discordTags: string[];
-  discordIds: string[];
+  discordAccounts: DiscordAccount[];
   /** Per-account channel subscriptions: discordId → enabled channelIds */
   channels: Record<string, string[]>;
   locale?: Locale;
@@ -37,6 +41,7 @@ export interface TelegramBotHandle {
     discordUsername: string,
   ): string | null;
   setAvailableChannels(telegramUserId: string, entries: ChannelEntry[]): void;
+
   sendNotification(chatId: string, text: string): Promise<void>;
   startPolling(): Promise<void>;
   stopPolling(): void;

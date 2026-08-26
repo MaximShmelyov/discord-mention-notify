@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { EventEmitter } from 'node:events';
 import { DEFAULT_LOCALE } from './i18n.js';
-import type { Locale, UserRecord, UserDB, Logger } from './types.js';
+import type { Locale, DiscordAccount, UserRecord, UserDB, Logger } from './types.js';
 
 export class Store extends EventEmitter {
   private db: UserDB = {};
@@ -19,6 +19,7 @@ export class Store extends EventEmitter {
       const raw = fs.readFileSync(this.filePath, 'utf-8');
       this.db = JSON.parse(raw) as UserDB;
       this.migrateChannels();
+      this.migrateDiscordAccounts();
       this.logger.log(`User DB loaded: ${Object.keys(this.db).length} users`);
     } catch {
       this.db = {};
@@ -35,9 +36,10 @@ export class Store extends EventEmitter {
     let migrated = false;
     for (const user of Object.values(this.db)) {
       if (Array.isArray(user.channels)) {
+        const legacy = user as unknown as { discordIds?: string[] };
         const oldChannels = user.channels as unknown as string[];
         const perAccount: Record<string, string[]> = {};
-        for (const discordId of user.discordIds) {
+        for (const discordId of legacy.discordIds ?? []) {
           perAccount[discordId] = [...oldChannels];
         }
         user.channels = perAccount;
@@ -47,6 +49,35 @@ export class Store extends EventEmitter {
     if (migrated) {
       this.save();
       this.logger.log('Migrated channels from flat array to per-account format');
+    }
+  }
+
+  /**
+   * Migrate legacy parallel arrays `discordTags: string[]` + `discordIds: string[]`
+   * to a single `discordAccounts: DiscordAccount[]` array of objects.
+   */
+  private migrateDiscordAccounts(): void {
+    let migrated = false;
+    for (const user of Object.values(this.db)) {
+      const legacy = user as unknown as {
+        discordTags?: string[];
+        discordIds?: string[];
+      };
+      if (Array.isArray(legacy.discordTags) && Array.isArray(legacy.discordIds)) {
+        const accounts: DiscordAccount[] = legacy.discordIds.map((id, i) => ({
+          tag: legacy.discordTags![i] ?? id,
+          id,
+        }));
+        user.discordAccounts = accounts;
+        const raw = user as unknown as Record<string, unknown>;
+        delete raw['discordTags'];
+        delete raw['discordIds'];
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      this.save();
+      this.logger.log('Migrated discordTags/discordIds to discordAccounts');
     }
   }
 
@@ -74,8 +105,7 @@ export class Store extends EventEmitter {
 
   createUser(telegramId: string): UserRecord {
     const record: UserRecord = {
-      discordTags: [],
-      discordIds: [],
+      discordAccounts: [],
       channels: {},
     };
     this.db[telegramId] = record;
@@ -91,12 +121,11 @@ export class Store extends EventEmitter {
     }
 
     // Prevent duplicate Discord accounts for the same Telegram user
-    if (user.discordIds.includes(discordId)) {
+    if (user.discordAccounts.some((a) => a.id === discordId)) {
       return false;
     }
 
-    user.discordTags.push(tag);
-    user.discordIds.push(discordId);
+    user.discordAccounts.push({ tag, id: discordId });
     user.channels[discordId] = [];
     this.save();
     this.emit('change');
@@ -108,11 +137,11 @@ export class Store extends EventEmitter {
     const user = this.db[telegramId];
     if (!user) return false;
 
-    const index = user.discordIds.indexOf(discordId);
+    const index = user.discordAccounts.findIndex((a) => a.id === discordId);
     if (index === -1) return false;
 
-    user.discordIds.splice(index, 1);
-    user.discordTags.splice(index, 1);
+    user.discordAccounts.splice(index, 1);
+    // Workaround for @typescript-eslint/no-dynamic-delete
     Reflect.deleteProperty(user.channels, discordId);
     this.save();
     this.emit('change');
@@ -138,7 +167,7 @@ export class Store extends EventEmitter {
 
   findTelegramIdByDiscordId(discordId: string): string | undefined {
     for (const [telegramId, record] of Object.entries(this.db)) {
-      if (record.discordIds.includes(discordId)) {
+      if (record.discordAccounts.some((a) => a.id === discordId)) {
         return telegramId;
       }
     }

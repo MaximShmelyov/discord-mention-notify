@@ -2,7 +2,14 @@ import crypto from 'node:crypto';
 import { Bot, InlineKeyboardBuilder } from 'node-telegram-bot-api';
 import type { Context } from 'node-telegram-bot-api';
 import { t } from './i18n.js';
-import type { Locale, Config, Logger, ChannelEntry, TelegramBotHandle } from './types.js';
+import type {
+  Locale,
+  DiscordAccount,
+  Config,
+  Logger,
+  ChannelEntry,
+  TelegramBotHandle,
+} from './types.js';
 import type { Store } from './store.js';
 
 const REGISTRATION_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -47,23 +54,21 @@ export function buildChannelKeyboard(
 }
 
 export function buildAccountKeyboard(
-  discordTags: string[],
-  discordIds: string[],
+  accounts: DiscordAccount[],
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
-  for (let i = 0; i < discordIds.length; i++) {
-    kb.text(`👤 ${discordTags[i]}`, `acct_${discordIds[i]}`).row();
+  for (const acct of accounts) {
+    kb.text(`👤 ${acct.tag}`, `acct_${acct.id}`).row();
   }
   return kb.build();
 }
 
 export function buildUnregisterKeyboard(
-  discordTags: string[],
-  discordIds: string[],
+  accounts: DiscordAccount[],
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
-  for (let i = 0; i < discordIds.length; i++) {
-    kb.text(`❌ ${discordTags[i]}`, `unreg_${discordIds[i]}`).row();
+  for (const acct of accounts) {
+    kb.text(`❌ ${acct.tag}`, `unreg_${acct.id}`).row();
   }
   return kb.build();
 }
@@ -138,12 +143,12 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     log(`/unregister from ${ctx.from?.username ?? chatId}`);
 
     const user = store.getUser(chatIdStr);
-    if (!user || user.discordIds.length === 0) {
+    if (!user || user.discordAccounts.length === 0) {
       return ctx.reply(t(loc(chatIdStr), 'telegram.unregister.noAccounts'));
     }
 
     return ctx.reply(t(loc(chatIdStr), 'telegram.unregister.prompt'), {
-      reply_markup: buildUnregisterKeyboard(user.discordTags, user.discordIds),
+      reply_markup: buildUnregisterKeyboard(user.discordAccounts),
     });
   });
 
@@ -164,8 +169,8 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     }
 
     // Single account — go directly to channel list
-    if (user.discordIds.length === 1) {
-      const discordId = user.discordIds[0]!;
+    if (user.discordAccounts.length === 1) {
+      const discordId = user.discordAccounts[0]!.id;
       const accountChannels = store.getAccountChannels(chatIdStr, discordId);
       return ctx.reply(t(loc(chatIdStr), 'telegram.list.header'), {
         reply_markup: buildChannelKeyboard(entries, accountChannels, discordId, false),
@@ -174,7 +179,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
     // Multiple accounts — show account selector
     return ctx.reply(t(loc(chatIdStr), 'telegram.list.selectAccount'), {
-      reply_markup: buildAccountKeyboard(user.discordTags, user.discordIds),
+      reply_markup: buildAccountKeyboard(user.discordAccounts),
     });
   });
 
@@ -280,10 +285,10 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     // --- Account selection (multi-account → show channels for chosen account) ---
     if (cbq.data.startsWith('acct_')) {
       const discordId = cbq.data.slice('acct_'.length);
-      const tagIndex = user.discordIds.indexOf(discordId);
-      if (tagIndex === -1) return;
+      const acct = user.discordAccounts.find((a) => a.id === discordId);
+      if (!acct) return;
 
-      const discordTag = user.discordTags[tagIndex]!;
+      const discordTag = acct.tag;
       const entries = availableChannels.get(chatIdStr) ?? [];
       const accountChannels = store.getAccountChannels(chatIdStr, discordId);
 
@@ -314,7 +319,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
             chat_id: chatId,
             message_id: cbq.message.message_id,
             text: t(loc(chatIdStr), 'telegram.list.selectAccount'),
-            reply_markup: buildAccountKeyboard(user.discordTags, user.discordIds),
+            reply_markup: buildAccountKeyboard(user.discordAccounts),
           });
         } catch {
           /* ignore edit errors */
@@ -326,10 +331,10 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     // --- Unregister account (unreg_{discordId}) ---
     if (cbq.data.startsWith('unreg_')) {
       const discordId = cbq.data.slice('unreg_'.length);
-      const tagIndex = user.discordIds.indexOf(discordId);
-      if (tagIndex === -1) return;
+      const acct = user.discordAccounts.find((a) => a.id === discordId);
+      if (!acct) return;
 
-      const discordTag = user.discordTags[tagIndex]!;
+      const discordTag = acct.tag;
       store.removeDiscordLink(chatIdStr, discordId);
 
       log(`🗑️ TG=${chatIdStr} unlinked Discord=${discordTag} (${discordId})`);
@@ -342,7 +347,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       const updatedUser = store.getUser(chatIdStr);
       if (cbq.message) {
         try {
-          if (!updatedUser || updatedUser.discordIds.length === 0) {
+          if (!updatedUser || updatedUser.discordAccounts.length === 0) {
             // No accounts left — replace with a text message
             await bot.api.editMessageText({
               chat_id: chatId,
@@ -353,10 +358,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
             await bot.api.editMessageReplyMarkup({
               chat_id: chatId,
               message_id: cbq.message.message_id,
-              reply_markup: buildUnregisterKeyboard(
-                updatedUser.discordTags,
-                updatedUser.discordIds,
-              ),
+              reply_markup: buildUnregisterKeyboard(updatedUser.discordAccounts),
             });
           }
         } catch {
@@ -383,7 +385,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
       const entries = availableChannels.get(chatIdStr) ?? [];
       const accountChannels = store.getAccountChannels(chatIdStr, discordId);
-      const showBack = user.discordIds.length > 1;
+      const showBack = user.discordAccounts.length > 1;
 
       if (cbq.message) {
         try {

@@ -38,8 +38,7 @@ describe('Store', () => {
     it('should parse valid JSON file with per-account channels', () => {
       const data = {
         '12345': {
-          discordTags: ['user#1234'],
-          discordIds: ['999'],
+          discordAccounts: [{ tag: 'user#1234', id: '999' }],
           channels: { '999': ['ch1'] },
         },
       };
@@ -71,6 +70,11 @@ describe('Store', () => {
         d1: ['ch1', 'ch2'],
         d2: ['ch1', 'ch2'],
       });
+      // Parallel arrays should be migrated to discordAccounts
+      assert.deepStrictEqual(user.discordAccounts, [
+        { tag: 'user#1234', id: 'd1' },
+        { tag: 'alt#5678', id: 'd2' },
+      ]);
     });
 
     it('should persist migrated data to disk', () => {
@@ -86,6 +90,26 @@ describe('Store', () => {
       // Re-read from disk to verify migration was saved
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
       assert.deepStrictEqual(raw['12345'].channels, { d1: ['ch1'] });
+      assert.deepStrictEqual(raw['12345'].discordAccounts, [{ tag: 'user#1234', id: 'd1' }]);
+      assert.strictEqual(raw['12345'].discordTags, undefined);
+      assert.strictEqual(raw['12345'].discordIds, undefined);
+    });
+
+    it('should migrate V2 parallel arrays to discordAccounts', () => {
+      const v2Data = {
+        '12345': {
+          discordTags: ['user#1234'],
+          discordIds: ['d1'],
+          channels: { d1: ['ch1'] },
+        },
+      };
+      fs.writeFileSync(dbPath, JSON.stringify(v2Data));
+      store.load();
+      const user = store.getUser('12345');
+      assert.ok(user);
+      assert.deepStrictEqual(user.discordAccounts, [{ tag: 'user#1234', id: 'd1' }]);
+      assert.strictEqual('discordTags' in user, false);
+      assert.strictEqual('discordIds' in user, false);
     });
   });
 
@@ -93,7 +117,7 @@ describe('Store', () => {
     it('should create a new user record with empty channels object', () => {
       store.load();
       const user = store.createUser('12345');
-      assert.deepStrictEqual(user, { discordTags: [], discordIds: [], channels: {} });
+      assert.deepStrictEqual(user, { discordAccounts: [], channels: {} });
       assert.ok(store.hasUser('12345'));
     });
 
@@ -116,14 +140,13 @@ describe('Store', () => {
   });
 
   describe('addDiscordLink', () => {
-    it('should add tag and id to existing user', () => {
+    it('should add account to existing user', () => {
       store.load();
       store.createUser('12345');
       store.addDiscordLink('12345', 'user#1234', '999');
       const user = store.getUser('12345');
       assert.ok(user);
-      assert.deepStrictEqual(user.discordTags, ['user#1234']);
-      assert.deepStrictEqual(user.discordIds, ['999']);
+      assert.deepStrictEqual(user.discordAccounts, [{ tag: 'user#1234', id: '999' }]);
     });
 
     it('should initialize per-account channels entry', () => {
@@ -140,7 +163,7 @@ describe('Store', () => {
       assert.ok(store.hasUser('12345'));
       const user = store.getUser('12345');
       assert.ok(user);
-      assert.deepStrictEqual(user.discordTags, ['user#1234']);
+      assert.deepStrictEqual(user.discordAccounts, [{ tag: 'user#1234', id: '999' }]);
     });
 
     it('should return true on first link and false on duplicate', () => {
@@ -156,16 +179,19 @@ describe('Store', () => {
       store.addDiscordLink('12345', 'user#1234', '999');
       const user = store.getUser('12345');
       assert.ok(user);
-      assert.strictEqual(user.discordTags.length, 1);
-      assert.strictEqual(user.discordIds.length, 1);
+      assert.strictEqual(user.discordAccounts.length, 1);
     });
 
     it('should allow same discord account linked to different telegram users', () => {
       store.load();
       store.addDiscordLink('11111', 'user#1234', '999');
       store.addDiscordLink('22222', 'user#1234', '999');
-      assert.deepStrictEqual(store.getUser('11111')!.discordIds, ['999']);
-      assert.deepStrictEqual(store.getUser('22222')!.discordIds, ['999']);
+      assert.deepStrictEqual(store.getUser('11111')!.discordAccounts, [
+        { tag: 'user#1234', id: '999' },
+      ]);
+      assert.deepStrictEqual(store.getUser('22222')!.discordAccounts, [
+        { tag: 'user#1234', id: '999' },
+      ]);
     });
 
     it('should emit userLinked event with telegramId and discordId', () => {
@@ -212,8 +238,7 @@ describe('Store', () => {
       assert.strictEqual(removed, true);
       const user = store.getUser('12345');
       assert.ok(user);
-      assert.deepStrictEqual(user.discordTags, ['alt#5678']);
-      assert.deepStrictEqual(user.discordIds, ['d2']);
+      assert.deepStrictEqual(user.discordAccounts, [{ tag: 'alt#5678', id: 'd2' }]);
     });
 
     it('should delete channel subscriptions for the removed account', () => {
@@ -254,8 +279,7 @@ describe('Store', () => {
       store.addDiscordLink('12345', 'alt#5678', 'd2');
       store.removeDiscordLink('12345', 'd1');
       const raw = JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
-      assert.deepStrictEqual(raw['12345'].discordIds, ['d2']);
-      assert.deepStrictEqual(raw['12345'].discordTags, ['alt#5678']);
+      assert.deepStrictEqual(raw['12345'].discordAccounts, [{ tag: 'alt#5678', id: 'd2' }]);
     });
 
     it('should emit change event', () => {
@@ -276,7 +300,7 @@ describe('Store', () => {
       assert.ok(store.hasUser('12345'), 'user record must still exist');
       const user = store.getUser('12345');
       assert.ok(user);
-      assert.strictEqual(user.discordIds.length, 0);
+      assert.strictEqual(user.discordAccounts.length, 0);
     });
   });
 
@@ -486,6 +510,14 @@ describe('Store', () => {
       store.toggleChannel('240077413', 'discord123', 'ch1');
       assert.deepStrictEqual(store.getAccountChannels('240077413', 'discord123'), ['ch2']);
       assert.deepStrictEqual(store.getAccountChannels('240077413', 'discord456'), ['ch1', 'ch2']);
+
+      // Verify discordAccounts structure
+      const user = store.getUser('240077413');
+      assert.ok(user);
+      assert.deepStrictEqual(user.discordAccounts, [
+        { tag: 'lakmoes', id: 'discord123' },
+        { tag: 'alt_account', id: 'discord456' },
+      ]);
     });
   });
 

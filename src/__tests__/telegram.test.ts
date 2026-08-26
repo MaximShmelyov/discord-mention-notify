@@ -10,7 +10,7 @@ import {
   mergeChannelEntries,
 } from '../telegram.js';
 import { Store } from '../store.js';
-import type { Logger, ChannelEntry } from '../types.js';
+import type { Logger, DiscordAccount, ChannelEntry } from '../types.js';
 
 function createSilentLogger(): Logger {
   return { log: () => {} };
@@ -74,8 +74,13 @@ describe('buildChannelKeyboard', () => {
 });
 
 describe('buildAccountKeyboard', () => {
+  const accounts: DiscordAccount[] = [
+    { tag: 'user#1234', id: 'd1' },
+    { tag: 'alt#5678', id: 'd2' },
+  ];
+
   it('should create a button per discord account', () => {
-    const kb = buildAccountKeyboard(['user#1234', 'alt#5678'], ['d1', 'd2']);
+    const kb = buildAccountKeyboard(accounts);
     const buttons = kb.inline_keyboard.flat();
     assert.strictEqual(buttons.length, 2);
     assert.ok(buttons[0]?.text.includes('user#1234'));
@@ -83,20 +88,25 @@ describe('buildAccountKeyboard', () => {
   });
 
   it('should set callback_data with acct_ prefix', () => {
-    const kb = buildAccountKeyboard(['user#1234'], ['d1']);
+    const kb = buildAccountKeyboard([accounts[0]!]);
     const buttons = kb.inline_keyboard.flat();
     assert.strictEqual(buttons[0]?.callback_data, 'acct_d1');
   });
 
   it('should return empty keyboard for no accounts', () => {
-    const kb = buildAccountKeyboard([], []);
+    const kb = buildAccountKeyboard([]);
     assert.strictEqual(kb.inline_keyboard.flat().length, 0);
   });
 });
 
 describe('buildUnregisterKeyboard', () => {
+  const accounts: DiscordAccount[] = [
+    { tag: 'user#1234', id: 'd1' },
+    { tag: 'alt#5678', id: 'd2' },
+  ];
+
   it('should create a button per discord account with ❌ prefix', () => {
-    const kb = buildUnregisterKeyboard(['user#1234', 'alt#5678'], ['d1', 'd2']);
+    const kb = buildUnregisterKeyboard(accounts);
     const buttons = kb.inline_keyboard.flat();
     assert.strictEqual(buttons.length, 2);
     assert.ok(buttons[0]?.text.includes('❌'));
@@ -105,13 +115,13 @@ describe('buildUnregisterKeyboard', () => {
   });
 
   it('should set callback_data with unreg_ prefix', () => {
-    const kb = buildUnregisterKeyboard(['user#1234'], ['d1']);
+    const kb = buildUnregisterKeyboard([accounts[0]!]);
     const buttons = kb.inline_keyboard.flat();
     assert.strictEqual(buttons[0]?.callback_data, 'unreg_d1');
   });
 
   it('should return empty keyboard for no accounts', () => {
-    const kb = buildUnregisterKeyboard([], []);
+    const kb = buildUnregisterKeyboard([]);
     assert.strictEqual(kb.inline_keyboard.flat().length, 0);
   });
 });
@@ -195,8 +205,7 @@ describe('confirmDiscordCode integration', () => {
     store.addDiscordLink('telegram123', 'user#1234', 'discord999');
     const user = store.getUser('telegram123');
     assert.ok(user);
-    assert.deepStrictEqual(user.discordTags, ['user#1234']);
-    assert.deepStrictEqual(user.discordIds, ['discord999']);
+    assert.deepStrictEqual(user.discordAccounts, [{ tag: 'user#1234', id: 'discord999' }]);
   });
 
   it('should support multiple discord accounts for one telegram user', () => {
@@ -204,8 +213,7 @@ describe('confirmDiscordCode integration', () => {
     store.addDiscordLink('telegram123', 'alt#5678', 'discord888');
     const user = store.getUser('telegram123');
     assert.ok(user);
-    assert.strictEqual(user.discordTags.length, 2);
-    assert.strictEqual(user.discordIds.length, 2);
+    assert.strictEqual(user.discordAccounts.length, 2);
   });
 
   it('should not duplicate the same discord account for the same telegram user', () => {
@@ -213,8 +221,7 @@ describe('confirmDiscordCode integration', () => {
     store.addDiscordLink('telegram123', 'user#1234', 'discord999');
     const user = store.getUser('telegram123');
     assert.ok(user);
-    assert.strictEqual(user.discordTags.length, 1, 'tag must not be duplicated');
-    assert.strictEqual(user.discordIds.length, 1, 'id must not be duplicated');
+    assert.strictEqual(user.discordAccounts.length, 1, 'account must not be duplicated');
   });
 
   it('should return false when discord account is already linked', () => {
@@ -231,8 +238,8 @@ describe('confirmDiscordCode integration', () => {
     const user2 = store.getUser('telegram222');
     assert.ok(user1);
     assert.ok(user2);
-    assert.deepStrictEqual(user1.discordIds, ['discord999']);
-    assert.deepStrictEqual(user2.discordIds, ['discord999']);
+    assert.deepStrictEqual(user1.discordAccounts, [{ tag: 'user#1234', id: 'discord999' }]);
+    assert.deepStrictEqual(user2.discordAccounts, [{ tag: 'user#1234', id: 'discord999' }]);
   });
 
   it('should not emit userLinked when discord account is already linked', () => {
@@ -251,5 +258,9 @@ describe('confirmDiscordCode integration', () => {
     const user = store.getUser('telegram123');
     assert.ok(user);
     assert.deepStrictEqual(user.channels, { discord999: [], discord888: [] });
+    assert.deepStrictEqual(user.discordAccounts, [
+      { tag: 'user#1234', id: 'discord999' },
+      { tag: 'alt#5678', id: 'discord888' },
+    ]);
   });
 });
