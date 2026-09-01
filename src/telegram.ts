@@ -43,7 +43,7 @@ export function buildChannelKeyboard(
   for (const entry of entries) {
     const active = enabledChannels.includes(entry.id);
     kb.text(
-      `${active ? '✅' : '❌'} ${entry.guildName} / #${entry.channelName}`,
+      `${active ? '[+]' : '[-]'} ${entry.guildName} / #${entry.channelName}`,
       `ch_${discordId}_${entry.id}`,
     ).row();
   }
@@ -58,7 +58,7 @@ export function buildAccountKeyboard(
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
   for (const acct of accounts) {
-    kb.text(`👤 ${acct.tag}`, `acct_${acct.id}`).row();
+    kb.text(acct.tag, `acct_${acct.id}`).row();
   }
   return kb.build();
 }
@@ -68,7 +68,7 @@ export function buildUnregisterKeyboard(
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
   for (const acct of accounts) {
-    kb.text(`❌ ${acct.tag}`, `unreg_${acct.id}`).row();
+    kb.text(`[x] ${acct.tag}`, `unreg_${acct.id}`).row();
   }
   return kb.build();
 }
@@ -77,8 +77,8 @@ export function buildLangKeyboard(
   currentLocale: Locale,
 ): ReturnType<InlineKeyboardBuilder['build']> {
   const kb = new InlineKeyboardBuilder();
-  kb.text(currentLocale === 'en' ? '✅ English' : 'English', 'lang_en').row();
-  kb.text(currentLocale === 'ru' ? '✅ Русский' : 'Русский', 'lang_ru').row();
+  kb.text(currentLocale === 'en' ? '[*] English' : 'English', 'lang_en').row();
+  kb.text(currentLocale === 'ru' ? '[*] Русский' : 'Русский', 'lang_ru').row();
   return kb.build();
 }
 
@@ -262,7 +262,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       if (newLocale !== 'en' && newLocale !== 'ru') return;
 
       store.setUserLocale(chatIdStr, newLocale);
-      log(`🌐 TG=${chatIdStr} changed language to ${newLocale}`);
+      log(`TG=${chatIdStr} changed language to ${newLocale}`);
 
       await ctx.answerCallbackQuery({ text: t(newLocale, 'telegram.lang.saved') });
 
@@ -338,7 +338,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
       const discordTag = acct.tag;
       store.removeDiscordLink(chatIdStr, discordId);
 
-      log(`🗑️ TG=${chatIdStr} unlinked Discord=${discordTag} (${discordId})`);
+      log(`TG=${chatIdStr} unlinked Discord=${discordTag} (${discordId})`);
 
       await ctx.answerCallbackQuery({
         text: t(loc(chatIdStr), 'telegram.unregister.done', { discordTag }),
@@ -379,7 +379,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
       const added = store.toggleChannel(chatIdStr, discordId, channelId);
       log(
-        `${added ? '✅' : '❎'} TG=${chatIdStr} Discord=${discordId} ${added ? 'enabled' : 'disabled'} channel ${channelId}`,
+        `TG=${chatIdStr} Discord=${discordId} ${added ? 'enabled' : 'disabled'} channel ${channelId}`,
       );
 
       await ctx.answerCallbackQuery({ text: t(loc(chatIdStr), 'telegram.channel.saved') });
@@ -430,8 +430,8 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
 
     log(
       added
-        ? `✅ Linked: TG=${pending.telegramId} <-> Discord=${discordTag}`
-        : `⚠️ Already linked: TG=${pending.telegramId} <-> Discord=${discordTag}`,
+        ? `Linked: TG=${pending.telegramId} <-> Discord=${discordTag}`
+        : `Already linked: TG=${pending.telegramId} <-> Discord=${discordTag}`,
     );
     // Number() is safe here — Telegram user chat IDs are within MAX_SAFE_INTEGER.
     // Channel/supergroup IDs can exceed it, but this bot only messages users.
@@ -452,7 +452,7 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     const existing = availableChannels.get(telegramUserId) ?? [];
     availableChannels.set(telegramUserId, mergeChannelEntries(existing, entries));
     log(
-      `📡 Channels updated for TG=${telegramUserId} (${availableChannels.get(telegramUserId)!.length} total)`,
+      `Channels updated for TG=${telegramUserId} (${availableChannels.get(telegramUserId)!.length} total)`,
     );
   }
 

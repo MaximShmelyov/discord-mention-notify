@@ -1,6 +1,13 @@
 import fs from 'node:fs';
-import { Client, GatewayIntentBits, Partials, PermissionsBitField, ChannelType } from 'discord.js';
-import type { Message, Guild } from 'discord.js';
+import {
+  Client,
+  GatewayIntentBits,
+  Partials,
+  PermissionsBitField,
+  ChannelType,
+  Status,
+} from 'discord.js';
+import type { Message, Guild, CloseEvent } from 'discord.js';
 import { DEFAULT_LOCALE, t, verificationCodeRegexAnyLocale } from './i18n.js';
 import type {
   Locale,
@@ -87,7 +94,7 @@ export function createDiscordBot(
     }
     store.enableChannels(telegramId, discordId, allChannelIds);
     log(
-      `📡 Channels pushed to newly linked user TG=${telegramId} Discord=${discordId} (${allChannelIds.length} enabled)`,
+      `Channels pushed to newly linked user TG=${telegramId} Discord=${discordId} (${allChannelIds.length} enabled)`,
     );
   });
 
@@ -100,7 +107,7 @@ export function createDiscordBot(
   // --- Event handlers ---
 
   client.once('ready', async () => {
-    log(`✅ Bot started as ${client.user?.tag}`);
+    log(`Bot started as ${client.user?.tag}`);
 
     for (const guild of client.guilds.cache.values()) {
       const isWhitelisted = config.WHITELISTED_GUILDS.includes(guild.id);
@@ -199,7 +206,7 @@ export function createDiscordBot(
             const discordName = mentionedUser
               ? `${mentionedUser.displayName}(${mentionedUser.tag})`
               : acct.id;
-            log(`📤 Notification sent for TG=${telegramUserId}, mentioned=${discordName}`);
+            log(`Notification sent for TG=${telegramUserId}, mentioned=${discordName}`);
           }
         }
       }
@@ -211,8 +218,67 @@ export function createDiscordBot(
 
   // --- Connection monitoring ---
 
-  client.on('error', (err: Error) => log(`Discord error: ${err.message}`));
-  client.on('warn', (msg: string) => log(`Discord warning: ${msg}`));
+  client.on('error', (err: Error) => log(`Client error: ${err.message}`));
+  client.on('warn', (msg: string) => log(`Client warning: ${msg}`));
+
+  client.on('shardDisconnect', (event: CloseEvent, shardId: number) => {
+    log(
+      `Shard ${shardId} disconnected — code=${event.code} reason="${event.reason}" clean=${String(event.wasClean)}`,
+    );
+  });
+
+  client.on('shardReconnecting', (shardId: number) => {
+    log(`Shard ${shardId} reconnecting...`);
+  });
+
+  client.on('shardResume', (shardId: number, replayedEvents: number) => {
+    log(`Shard ${shardId} resumed (replayed ${replayedEvents} events)`);
+  });
+
+  client.on('shardReady', (shardId: number) => {
+    log(`Shard ${shardId} ready`);
+  });
+
+  client.on('shardError', (err: Error, shardId: number) => {
+    log(`Shard ${shardId} error: ${err.message}`);
+  });
+
+  client.on('invalidated', () => {
+    log('Client session invalidated — bot will not receive events until restarted');
+  });
+
+  client.on('guildUnavailable', (guild) => {
+    log(`Guild unavailable: ${guild.id} (${guild.name})`);
+  });
+
+  client.on('guildAvailable', (guild) => {
+    log(`Guild available again: ${guild.id} (${guild.name})`);
+  });
+
+  // --- Periodic connection health log ---
+
+  const STATUS_LABELS: Record<number, string> = {
+    [Status.Ready]: 'Ready',
+    [Status.Connecting]: 'Connecting',
+    [Status.Reconnecting]: 'Reconnecting',
+    [Status.Idle]: 'Idle',
+    [Status.Nearly]: 'Nearly',
+    [Status.Disconnected]: 'Disconnected',
+    [Status.WaitingForGuilds]: 'WaitingForGuilds',
+    [Status.Identifying]: 'Identifying',
+    [Status.Resuming]: 'Resuming',
+  };
+
+  const HEALTH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+  const healthTimer = setInterval(() => {
+    const ws = client.ws;
+    const statusLabel = STATUS_LABELS[ws.status] ?? `Unknown(${ws.status})`;
+    const ping = ws.ping === -1 ? 'N/A' : `${ws.ping}ms`;
+    const guilds = client.guilds.cache.size;
+    log(`Health: status=${statusLabel} ping=${ping} guilds=${guilds}`);
+  }, HEALTH_INTERVAL_MS);
+  healthTimer.unref();
 
   // --- Public API ---
 
@@ -222,6 +288,7 @@ export function createDiscordBot(
   }
 
   function destroy(): void {
+    clearInterval(healthTimer);
     client.destroy();
     log('Discord client destroyed');
   }

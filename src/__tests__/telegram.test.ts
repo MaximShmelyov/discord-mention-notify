@@ -23,12 +23,12 @@ describe('buildChannelKeyboard', () => {
     { guildName: 'Server2', channelName: 'random', id: 'ch3' },
   ];
 
-  it('should mark active channels with ✅', () => {
+  it('should mark active channels with [+]', () => {
     const kb = buildChannelKeyboard(entries, ['ch1', 'ch3'], 'd1', false);
     const buttons = kb.inline_keyboard.flat();
-    assert.ok(buttons[0]?.text.startsWith('✅'));
-    assert.ok(buttons[1]?.text.startsWith('❌'));
-    assert.ok(buttons[2]?.text.startsWith('✅'));
+    assert.ok(buttons[0]?.text.startsWith('[+]'));
+    assert.ok(buttons[1]?.text.startsWith('[-]'));
+    assert.ok(buttons[2]?.text.startsWith('[+]'));
   });
 
   it('should include guild and channel name', () => {
@@ -105,11 +105,11 @@ describe('buildUnregisterKeyboard', () => {
     { tag: 'alt#5678', id: 'd2' },
   ];
 
-  it('should create a button per discord account with ❌ prefix', () => {
+  it('should create a button per discord account with [x] prefix', () => {
     const kb = buildUnregisterKeyboard(accounts);
     const buttons = kb.inline_keyboard.flat();
     assert.strictEqual(buttons.length, 2);
-    assert.ok(buttons[0]?.text.includes('❌'));
+    assert.ok(buttons[0]?.text.includes('[x]'));
     assert.ok(buttons[0]?.text.includes('user#1234'));
     assert.ok(buttons[1]?.text.includes('alt#5678'));
   });
