@@ -293,5 +293,9 @@ export function createDiscordBot(
     log('Discord client destroyed');
   }
 
-  return { login, destroy };
+  function getStatus(): string {
+    return STATUS_LABELS[client.ws.status] ?? `Unknown(${client.ws.status})`;
+  }
+
+  return { login, destroy, getStatus };
 }

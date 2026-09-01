@@ -27,11 +27,17 @@ export interface Config {
   USER_DB_PATH: string;
   CHANNELS_CACHE_PATH: string;
   LOGS_DIR: string;
+  HEALTH_FILE_PATH: string;
 }
 
 export interface Logger {
   log(msg: string): void;
   debug(msg: string): void;
+}
+
+export interface HealthStatus {
+  discord: string;
+  telegram: boolean;
 }
 
 export interface TelegramBotHandle {
@@ -46,9 +52,11 @@ export interface TelegramBotHandle {
   sendNotification(chatId: string, text: string): Promise<void>;
   startPolling(): Promise<void>;
   stopPolling(): void;
+  isPolling(): boolean;
 }
 
 export interface DiscordBotHandle {
   login(): Promise<void>;
   destroy(): void;
+  getStatus(): string;
 }

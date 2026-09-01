@@ -19,4 +19,5 @@ export const config: Config = Object.freeze({
   USER_DB_PATH: path.resolve(dataDir, 'user-db.json'),
   CHANNELS_CACHE_PATH: path.resolve(dataDir, 'available-channels.json'),
   LOGS_DIR: path.resolve(dataDir, 'logs'),
+  HEALTH_FILE_PATH: path.resolve(dataDir, 'health.json'),
 });

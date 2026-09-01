@@ -28,4 +28,7 @@ RUN mkdir -p /app/data \
   && echo '{}' > /app/data/user-db.json \
   && echo '{}' > /app/data/available-channels.json
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["node", "dist/healthcheck.js"]
+
 CMD ["node", "dist/start.js"]

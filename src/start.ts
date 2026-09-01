@@ -3,6 +3,7 @@ import { initLogger, createLogger, log } from './logger.js';
 import { Store } from './store.js';
 import { createTelegramBot } from './telegram.js';
 import { createDiscordBot } from './discord.js';
+import { startHeartbeat } from './health.js';
 
 // Initialize logging
 initLogger(config.LOGS_DIR);
@@ -22,11 +23,19 @@ async function main(): Promise<void> {
   const discord = createDiscordBot(config, store, telegram, createLogger('DISCORD'));
   await discord.login();
 
+  // 4. Start health heartbeat
+  const heartbeat = startHeartbeat(
+    config.HEALTH_FILE_PATH,
+    () => ({ discord: discord.getStatus(), telegram: telegram.isPolling() }),
+    createLogger('HEALTH'),
+  );
+
   mainLogger.log('All systems started');
 
   // Graceful shutdown
   const shutdown = async (): Promise<void> => {
     mainLogger.log('Shutting down...');
+    heartbeat.stop();
     telegram.stopPolling();
     discord.destroy();
     await store.flush();

@@ -465,19 +465,27 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     }
   }
 
+  let polling = false;
+
   async function startPolling(): Promise<void> {
     // Start polling in background (don't await — it resolves when stopped)
     bot.startPolling().catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       log(`Polling error: ${msg}`);
     });
+    polling = true;
     log('Telegram bot polling started');
   }
 
   function stopPolling(): void {
     clearInterval(cleanupTimer);
     bot.stop();
+    polling = false;
     log('Telegram bot stopped');
+  }
+
+  function isPolling(): boolean {
+    return polling;
   }
 
   return {
@@ -486,5 +494,6 @@ export function createTelegramBot(config: Config, store: Store, logger: Logger):
     sendNotification,
     startPolling,
     stopPolling,
+    isPolling,
   };
 }
